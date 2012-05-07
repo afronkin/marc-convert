@@ -142,28 +142,27 @@ bool convertFile(void)
 			switch (options.inputFormat) {
 			case ISO2709:
 				readStatus = marcReader.next(record);
+				if (!readStatus && marcReader.getErrorCode()
+					!= MarcReader::END_OF_FILE)
+				{
+					throw marcReader.getErrorMessage();
+				}
 				break;
 			case MARCXML:
 				readStatus = marcXmlReader.next(record);
+				if (!readStatus && marcXmlReader.getErrorCode()
+					!= MarcXmlReader::END_OF_FILE)
+				{
+					throw marcXmlReader.getErrorMessage();
+				}
 				break;
 			default:
-				readStatus = false;
-				break;
+				throw "unknown input format";
 			}
 
+			/* Exit when end of file reached. */
 			if (!readStatus) {
 				break;
-				/*
-				if (marc_read_result == MARC_ERROR_INVALID) {
-					num_bad_recs++;
-					if (options.verbose_level > 1) {
-						fprintf(stderr, "Warning: the record %d contains an error "
-							"in position %d.\n", rec_no, record.error_pos);
-					}
-				} else {
-					break;
-				}
-				*/
 			}
 
 			/* Write record to output file. */
@@ -181,18 +180,6 @@ bool convertFile(void)
 				} else {
 					fprintf(outputFile, "Record %d\n", recNo);
 				}
-
-				/* Display warning for invalid records. */
-				/*
-				if (record.errorPos >= 0) {
-					fprintf(dest_file,
-						"Warning: the record contains an error in position %d.\n",
-						record.error_pos);
-					if (options.force_display == 0) {
-						continue;
-					}
-				}
-				*/
 
 				/* Write record. */
 				std::string textRecord = record.toString();
@@ -242,9 +229,9 @@ bool convertFile(void)
 			fprintf(stderr, "Done in %d:%02d:%02d.\n",
 				usedHours, usedMinutes, usedSeconds);
 		}
-	} catch (const char *errorMessage) {
+	} catch (std::string errorMessage) {
 		/* Print error message. */
-		fprintf(stderr, "Error: %s.\n", errorMessage);
+		fprintf(stderr, "Error: %s.\n", errorMessage.c_str());
 
 		/* Close files. */
 		if (inputFile && inputFile != stdin) {

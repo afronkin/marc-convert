@@ -95,3 +95,20 @@ std::string serialize_xml(std::string &s)
 
 	return dest;
 }
+
+/*
+ * Verify that all string characters are decimal digits in ASCII encoding.
+ */
+int is_numeric(const char *s, size_t n)
+{
+	char *p, *s_end;
+
+	s_end = (char *) s + n;
+	for (p = (char *) s; p < s_end && *p != '\0'; p++) {
+		if (*p < 0x30 || *p > 0x39) {
+			return 0;
+		}
+	}
+
+	return 1;
+}

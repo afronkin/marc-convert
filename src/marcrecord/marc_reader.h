@@ -43,7 +43,20 @@
  * MARC (ISO 2709) records reader.
  */
 class MarcReader {
+public:
+	/* Error codes. */
+	enum ErrorCode {
+		OK = 0,
+		END_OF_FILE = 1,
+		ERROR_INVALID_RECORD = -1
+	};
+
 protected:
+	/* Code of last error. */
+	ErrorCode errorCode;
+	/* Message of last error. */
+	std::string errorMessage;
+
 	/* Input ISO 2709 file. */
 	FILE *inputFile;
 	/* Encoding of input ISO 2709 file. */
@@ -60,6 +73,11 @@ public:
 	/* Destructor. */
 	~MarcReader();
 
+	/* Get last error code. */
+	ErrorCode getErrorCode(void);
+	/* Get last error message. */
+	std::string & getErrorMessage(void);
+
 	/* Open input file. */
 	void open(FILE *inputFile, const char *inputEncoding = NULL);
 	/* Close input file. */
@@ -67,9 +85,8 @@ public:
 
 	/* Read next record from MARCXML file. */
 	bool next(MarcRecord &record);
-
 	/* Parse record from ISO 2709 buffer. */
-	bool parseRecord(const char *recordBuf, MarcRecord &record);
+	bool parse(const char *recordBuf, unsigned int recordBufLen, MarcRecord &record);
 };
 
 #endif /* MARC_READER_H */

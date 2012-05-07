@@ -45,19 +45,6 @@
  */
 class MarcXmlReader {
 public:
-	/* Exception class for events and errors handling. */
-	class Exception {
-	public:
-		enum ErrorCode { ERROR_XML } errorCode;
-		std::string errorMessage;
-
-		Exception(enum ErrorCode errorCode, std::string errorMessage)
-		{
-			this->errorCode = errorCode;
-			this->errorMessage = errorMessage;
-		}
-	};
-
 	/* XML parser state structure definition. */
 	struct XmlParserState {
 		XML_Parser xmlParser;
@@ -71,7 +58,19 @@ public:
 		std::string characterData;
 	};
 
+	/* Error codes. */
+	enum ErrorCode {
+		OK = 0,
+		END_OF_FILE = 1,
+		ERROR_XML_PARSER = -1
+	};
+
 protected:
+	/* Code of last error. */
+	ErrorCode errorCode;
+	/* Message of last error. */
+	std::string errorMessage;
+
 	/* Input MARCXML file. */
 	FILE *inputFile;
 	/* Encoding of input MARCXML file. */
@@ -90,13 +89,18 @@ public:
 	/* Destructor. */
 	~MarcXmlReader();
 
+	/* Get last error code. */
+	ErrorCode getErrorCode(void);
+	/* Get last error message. */
+	std::string & getErrorMessage(void);
+
 	/* Open input file and initialize parser. */
 	void open(FILE *inputFile, const char *inputEncoding = NULL);
 	/* Close input file and finalize parser. */
 	void close(void);
 
 	/* Read next record from MARCXML file. */
-	bool next(MarcRecord &);
+	bool next(MarcRecord &record);
 };
 
 #endif /* MARCXML_READER_H */

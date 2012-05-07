@@ -53,7 +53,7 @@ public:
 
 	/* Enum of error codes. */
 	enum ErrorCode {
-		SUCCESS = 0,
+		OK = 0,
 		ERROR = -1
 	};
 

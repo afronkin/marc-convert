@@ -42,5 +42,7 @@
 int snprintf(std::string &s, size_t n, const char *format, ...);
 /* Serialize XML string. */
 std::string serialize_xml(std::string &s);
+/* Verify that all string characters are decimal digits in ASCII encoding. */
+int is_numeric(const char *s, size_t n);
 
 #endif /* MARCRECORD_TOOLS_H */
