@@ -211,6 +211,9 @@ void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML
 	if (strcmp(name, "record") == 0 && parserState->parentTag == "") {
 		/* Set parent tag. */
 		parserState->parentTag = name;
+	} else if (strcmp(name, "leader") == 0 && parserState->parentTag == "record") {
+		/* Set parent tag. */
+		parserState->parentTag = name;
 	} else if (strcmp(name, "controlfield") == 0 && parserState->parentTag == "record") {
 		/* Get attribute 'tag' for control field. */
 		char *tag = (char *) "";

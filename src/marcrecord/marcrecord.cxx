@@ -108,7 +108,7 @@ void MarcRecord::setFormatVariant(FormatVariant formatVariant)
 /*
  * Get record leader.
  */
-MarcRecord::Leader MarcRecord::getLeader(void)
+MarcRecord::Leader & MarcRecord::getLeader(void)
 {
 	return leader;
 }

@@ -117,8 +117,8 @@ bool MarcXmlWriter::write(MarcRecord &record)
 	fputs("  <record>\n", outputFile);
 
 	/* Write record leader. */
-	fprintf(outputFile, "    <leader>%.*s</leader>\n",
-		(int) sizeof(struct MarcRecord::Leader), (char *) &record.leader);
+	fprintf(outputFile, "    <leader>     %.*s</leader>\n",
+		(int) sizeof(struct MarcRecord::Leader) - 5, (char *) &record.leader + 5);
 
 	/* Iterate all fields. */
 	for (MarcRecord::FieldIt fieldIt = record.fieldList.begin();

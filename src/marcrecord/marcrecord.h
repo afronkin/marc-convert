@@ -154,7 +154,7 @@ public:
 	void setFormatVariant(FormatVariant formatVariant);
 
 	/* Get record leader. */
-	Leader getLeader(void);
+	Leader & getLeader(void);
 	/* Set record leader. */
 	void setLeader(const Leader &leader);
 	void setLeader(const std::string &leaderData = "");
@@ -239,9 +239,9 @@ public:
 	void setTag(const std::string &data);
 
 	/* Get indicator 1 of data field. */
-	char getInd1(void);
+	char & getInd1(void);
 	/* Get indicator 2 of data field. */
-	char getInd2(void);
+	char & getInd2(void);
 	/* Set indicator 1 of data field. */
 	void setInd1(const char ind1);
 	/* Set indicator 2 of data field. */

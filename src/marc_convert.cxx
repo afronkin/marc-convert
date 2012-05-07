@@ -142,7 +142,7 @@ bool convertFile(void)
 			marcWriter.open(outputFile);
 			break;
 		case MARCXML:
-			marcXmlWriter.open(outputFile);
+			marcXmlWriter.open(outputFile, options.outputEncoding);
 			marcXmlWriter.writeHeader();
 			break;
 		case TEXT:

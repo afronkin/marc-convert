@@ -126,7 +126,7 @@ void MarcRecord::Field::setTag(const std::string &tag)
 /*
  * Get indicator 1 of data field.
  */
-char MarcRecord::Field::getInd1(void)
+char & MarcRecord::Field::getInd1(void)
 {
 	return ind1;
 }
@@ -134,7 +134,7 @@ char MarcRecord::Field::getInd1(void)
 /*
  * Get indicator 2 of data field.
  */
-char MarcRecord::Field::getInd2(void)
+char & MarcRecord::Field::getInd2(void)
 {
 	return ind2;
 }
