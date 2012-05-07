@@ -216,18 +216,18 @@ bool convertFile(void)
 				std::string textRecord = record.toString();
 				fwrite(textRecord.c_str(), textRecord.size(), 1, outputFile);
 				putc('\n', outputFile);
-
-				/* Print process status. */
-				time(&curTime);
-				if (curTime > prevTime) {
-					if (options.verboseLevel > 1) {
-						fprintf(stderr, "\rRecord: %d", recNo);
-					}
-
-					prevTime = curTime;
-					fflush(stderr);
-				}
 				break;
+			}
+
+			/* Print process status. */
+			time(&curTime);
+			if (curTime > prevTime) {
+				if (options.verboseLevel > 1) {
+					fprintf(stderr, "\rRecord: %d", recNo);
+				}
+
+				prevTime = curTime;
+				fflush(stderr);
 			}
 		}
 
@@ -400,6 +400,7 @@ void print_help(void)
 		"                    [-f <format>[,<encoding>]] [-t <format>[,<encoding>]]\n",
 		"                    [-s <number of records>] [-n <number of records>]\n",
 		"                    [-o <output file>] [<input file>]\n",
+		"\n",
 		"  -h --help      give this help\n",
 		"  -f --from      format and encoding of records in input file\n",
 		"                 formats: 'iso2709' (default), 'marcxml'\n",

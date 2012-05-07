@@ -12,7 +12,7 @@ CFLAGS=-O2 -Wall -ansi -pedantic -Wpointer-arith -Wmissing-prototypes -Wstrict-p
   -Wold-style-definition -Wwrite-strings -Wno-long-long -I$(SRC_DIR)/marcrecord/expat \
   -DHAVE_EXPAT_CONFIG_H
 LDFLAGS=
-LIBS=-lm
+LIBS=-lm -liconv
 
 .PHONY: all clean verify
 .SUFFIXES: .cxx .c .o
@@ -31,6 +31,7 @@ clean:
 verify:
 	./$(PROGRAM) -vv -o test1.txt ../share/test/rusmarc.iso
 	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,utf-8 -o test2.xml ../share/test/rusmarc.iso
+	./$(PROGRAM) -vv -f marcxml,utf-8 -t text,cp1251 -o test3.txt test2.xml
 	@echo $@ done.
 
 %.o: $(SRC_DIR)/%.cxx
