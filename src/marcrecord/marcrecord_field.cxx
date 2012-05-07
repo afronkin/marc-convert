@@ -70,6 +70,92 @@ void MarcRecord::Field::clear(void)
 }
 
 /*
+ * Set type of field to control field.
+ */
+void MarcRecord::Field::setControlFieldType(void)
+{
+	if (type != CONTROLFIELD) {
+		type = CONTROLFIELD;
+		clear();
+	}
+}
+
+/*
+ * Set type of field to data field.
+ */
+void MarcRecord::Field::setDataFieldType(void)
+{
+	if (type != DATAFIELD) {
+		type = DATAFIELD;
+		clear();
+	}
+}
+
+/*
+ * Return true if file type is control field.
+ */
+bool MarcRecord::Field::isControlField(void)
+{
+	return (type == CONTROLFIELD);
+}
+
+/*
+ * Return true if file type is data field.
+ */
+bool MarcRecord::Field::isDataField(void)
+{
+	return (type == DATAFIELD);
+}
+
+/*
+ * Get tag of data field.
+ */
+std::string & MarcRecord::Field::getTag(void)
+{
+	return tag;
+}
+
+/*
+ * Set tag of data field.
+ */
+void MarcRecord::Field::setTag(const std::string &tag)
+{
+	this->tag = tag;
+}
+
+/*
+ * Get indicator 1 of data field.
+ */
+char MarcRecord::Field::getInd1(void)
+{
+	return ind1;
+}
+
+/*
+ * Get indicator 2 of data field.
+ */
+char MarcRecord::Field::getInd2(void)
+{
+	return ind2;
+}
+
+/*
+ * Set indicator 1 of data field.
+ */
+void MarcRecord::Field::setInd1(const char ind1)
+{
+	this->ind1 = ind1;
+}
+
+/*
+ * Set indicator 2 of data field.
+ */
+void MarcRecord::Field::setInd2(const char ind1)
+{
+	this->ind2 = ind2;
+}
+
+/*
  * Get data of control field.
  */
 std::string & MarcRecord::Field::getData(void)

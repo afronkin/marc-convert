@@ -33,6 +33,8 @@
 
 /* Version: 1.0 (6 May 2012) */
 
+#include <errno.h>
+#include <iconv.h>
 #include <math.h>
 /*
 #include <stdio.h>
@@ -66,12 +68,18 @@ struct Options {
 /* Application options. */
 static struct Options options = { 0, NULL, 0, 0, NULL, NULL, ISO2709, TEXT, NULL, NULL };
 
+/* Convert encoding for MarcRecord. */
+bool iconvRecord(iconv_t iconvDesc, MarcRecord &record);
+/* Convert encoding for std::string. */
+bool iconv(iconv_t iconvDesc, const std::string &src, std::string &dest);
+
 /*
  * Convert records from MARC file.
  */
 bool convertFile(void)
 {
 	FILE *inputFile = NULL, *outputFile = NULL;
+	iconv_t iconvDesc = (iconv_t) -1;
 
 	try {
 		/* Open input file. */
@@ -80,7 +88,7 @@ bool convertFile(void)
 		} else {
 			inputFile = fopen(options.inputFileName, "rb");
 			if (inputFile == NULL) {
-				throw "can't open input file";
+				throw std::string("can't open input file");
 			}
 		}
 
@@ -90,14 +98,25 @@ bool convertFile(void)
 		} else {
 			outputFile = fopen(options.outputFileName, "wb");
 			if (outputFile == NULL) {
-				throw "can't open output file.";
+				throw std::string("can't open output file.");
 			}
 		}
 
-		/* Get process start time. */
-		time_t startTime, curTime, prevTime;
-		time(&startTime);
-		prevTime = startTime;
+		/* Initialize iconv when specified different input and output encodings. */
+		if (options.inputEncoding && options.outputEncoding
+			&& strcmp(options.inputEncoding, options.outputEncoding) != 0)
+		{
+			iconvDesc = iconv_open(options.outputEncoding, options.inputEncoding);
+			if (iconvDesc == (iconv_t) -1) {
+				if (errno == EINVAL) {
+					throw std::string("conversion from '")
+						+ options.inputEncoding + "' to '"
+						+ options.outputEncoding + "' is not supported";
+				} else {
+					throw std::string("can't initialize iconv");
+				}
+			}
+		}
 
 		/* Open input file in MarcReader or MarcXmlReader. */
 		MarcReader marcReader;
@@ -111,7 +130,7 @@ bool convertFile(void)
 			marcXmlReader.open(inputFile);
 			break;
 		default:
-			throw "wrong input format specified";
+			throw std::string("wrong input format specified");
 		}
 
 		/* Open output file in MarcWriter or MarcXmlWriter. */
@@ -129,8 +148,13 @@ bool convertFile(void)
 		case TEXT:
 			break;
 		default:
-			throw "wrong input format specified";
+			throw std::string("wrong input format specified");
 		}
+
+		/* Get process start time. */
+		time_t startTime, curTime, prevTime;
+		time(&startTime);
+		prevTime = startTime;
 
 		/* Iterate records in input file. */
 		int recNo, numBadRecs = 0;
@@ -157,12 +181,19 @@ bool convertFile(void)
 				}
 				break;
 			default:
-				throw "unknown input format";
+				throw std::string("unknown input format");
 			}
 
 			/* Exit when end of file reached. */
 			if (!readStatus) {
 				break;
+			}
+
+			/* Convert record encoding. */
+			if (iconvDesc != (iconv_t) -1) {
+				if (!iconvRecord(iconvDesc, record)) {
+					throw std::string("can't convert record encoding");
+				}
 			}
 
 			/* Write record to output file. */
@@ -205,12 +236,20 @@ bool convertFile(void)
 			marcXmlWriter.writeFooter();
 		}
 
+		/* Finalize iconv. */
+		if (iconvDesc != (iconv_t) -1) {
+			iconv_close(iconvDesc);
+			iconvDesc = (iconv_t) -1;
+		}
+
 		/* Close files. */
 		if (inputFile != stdin) {
 			fclose(inputFile);
+			inputFile = NULL;
 		}
 		if (outputFile != stdout) {
 			fclose(outputFile);
+			outputFile = NULL;
 		}
 
 		/* Print used time. */
@@ -233,6 +272,11 @@ bool convertFile(void)
 		/* Print error message. */
 		fprintf(stderr, "Error: %s.\n", errorMessage.c_str());
 
+		/* Finalize iconv. */
+		if (iconvDesc != (iconv_t) -1) {
+			iconv_close(iconvDesc);
+		}
+
 		/* Close files. */
 		if (inputFile && inputFile != stdin) {
 			fclose(inputFile);
@@ -242,6 +286,69 @@ bool convertFile(void)
 		}
 
 		return false;
+	}
+
+	return true;
+}
+
+/*
+ * Convert encoding for MarcRecord.
+ */
+bool iconvRecord(iconv_t iconvDesc, MarcRecord &record)
+{
+	/* Get list of specified fields. */
+	MarcRecord::FieldRefList fieldList = record.getFields();
+	for (MarcRecord::FieldRefIt fieldIt = fieldList.begin();
+		fieldIt != fieldList.end(); fieldIt++)
+	{
+		if ((*fieldIt)->isControlField()) {
+			/* Convert data of control field. */
+			std::string &fieldData = (*fieldIt)->getData();
+			std::string fieldDataRecoded;
+			if (!iconv(iconvDesc, fieldData, fieldDataRecoded)) {
+				return false;
+			}
+			fieldData = fieldDataRecoded;
+		} else {
+			/* Get list of specified subfields from field. */
+			MarcRecord::SubfieldRefList subfieldList = (*fieldIt)->getSubfields();
+			/* Convert data of subfields. */
+			for (MarcRecord::SubfieldRefIt subfieldIt = subfieldList.begin();
+				subfieldIt != subfieldList.end();  subfieldIt++)
+			{
+				std::string &subfieldData = (*subfieldIt)->getData();
+				std::string subfieldDataRecoded;
+				if (!iconv(iconvDesc, subfieldData, subfieldDataRecoded)) {
+					return false;
+				}
+				subfieldData = subfieldDataRecoded;
+			}
+		}
+	}
+
+	return true;
+}
+
+/*
+ * Convert encoding for std::string.
+ */
+bool iconv(iconv_t iconvDesc, const std::string &src, std::string &dest)
+{
+	char buf[4096];
+	char *p = (char *) src.c_str();
+	size_t srcLen = src.size();
+
+	dest = "";
+	while (srcLen > 0) {
+		size_t destLen = sizeof(buf);
+		char *q = buf;
+		if (iconv(iconvDesc, &p, &srcLen, &q, &destLen) == (size_t) -1) {
+			if (errno != E2BIG) {
+				return false;
+			}
+		}
+
+		dest.append(buf, sizeof(buf) - destLen);
 	}
 
 	return true;

@@ -203,6 +203,7 @@ public:
 public:
 	/* Type of field. */
 	enum Type type;
+
 	/* Field tag. */
 	std::string tag;
 	/* Indicator 1. */
@@ -221,6 +222,30 @@ public:
 
 	/* Clear field data. */
 	void clear();
+
+	/* Set type of field to controlfield. */
+	void setControlFieldType(void);
+	/* Set type of field to datafield. */
+	void setDataFieldType(void);
+
+	/* Return true if file type is controlfield. */
+	bool isControlField(void);
+	/* Return true if file type is datafield. */
+	bool isDataField(void);
+
+	/* Get tag of field. */
+	std::string & getTag(void);
+	/* Set tag of field. */
+	void setTag(const std::string &data);
+
+	/* Get indicator 1 of data field. */
+	char getInd1(void);
+	/* Get indicator 2 of data field. */
+	char getInd2(void);
+	/* Set indicator 1 of data field. */
+	void setInd1(const char ind1);
+	/* Set indicator 2 of data field. */
+	void setInd2(const char ind1);
 
 	/* Get data of control field. */
 	std::string & getData(void);
