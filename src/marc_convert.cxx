@@ -157,8 +157,10 @@ bool convertFile(void)
 		prevTime = startTime;
 
 		/* Iterate records in input file. */
-		int recNo, numBadRecs = 0;
-		for (recNo = 1;; recNo++) {
+		int recNo, numBadRecs = 0, numConvertedRecs = 0;
+		for (recNo = 1; options.numRecs == 0 || numConvertedRecs < options.numRecs;
+			recNo++)
+		{
 			/* Read record from input file. */
 			MarcRecord record;
 			bool readStatus;
@@ -197,26 +199,31 @@ bool convertFile(void)
 			}
 
 			/* Write record to output file. */
-			switch (options.outputFormat) {
-			case ISO2709:
-				marcWriter.write(record);
-				break;
-			case MARCXML:
-				marcXmlWriter.write(record);
-				break;
-			case TEXT:
-				/* Display record header. */
-				if (recNo > 1) {
-					fprintf(outputFile, "\nRecord %d\n", recNo);
-				} else {
-					fprintf(outputFile, "Record %d\n", recNo);
-				}
+			if (recNo > options.skipRecs) {
+				numConvertedRecs++;
 
-				/* Write record. */
-				std::string textRecord = record.toString();
-				fwrite(textRecord.c_str(), textRecord.size(), 1, outputFile);
-				putc('\n', outputFile);
-				break;
+				switch (options.outputFormat) {
+				case ISO2709:
+					marcWriter.write(record);
+					break;
+				case MARCXML:
+					marcXmlWriter.write(record);
+					break;
+				case TEXT:
+					/* Write record header. */
+					if (numConvertedRecs > 1) {
+						fprintf(outputFile, "\nRecord %d\n", recNo);
+					} else {
+						fprintf(outputFile, "Record %d\n", recNo);
+					}
+
+					/* Write record. */
+					std::string textRecord = record.toString();
+					fwrite(textRecord.c_str(), textRecord.size(), 1,
+						outputFile);
+					putc('\n', outputFile);
+					break;
+				}
 			}
 
 			/* Print process status. */
@@ -263,7 +270,8 @@ bool convertFile(void)
 			if (options.verboseLevel > 1) {
 				fputc('\r', stderr);
 			}
-			fprintf(stderr, "Total records: %d\n", recNo - 1);
+			fprintf(stderr, "Readed records: %d\n", recNo - 1);
+			fprintf(stderr, "Converted records: %d\n", numConvertedRecs);
 			fprintf(stderr, "Records with errors: %d\n", numBadRecs);
 			fprintf(stderr, "Done in %d:%02d:%02d.\n",
 				usedHours, usedMinutes, usedSeconds);
