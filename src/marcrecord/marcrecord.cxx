@@ -233,7 +233,7 @@ void MarcRecord::removeField(FieldIt fieldIt)
 std::string MarcRecord::toString(void)
 {
 	/* Print leader. */
-	std::string textRecord = "Leader: [";
+	std::string textRecord = "Leader [";
 	textRecord.append((const char *) &leader, sizeof(struct Leader));
 	textRecord += "]";
 
