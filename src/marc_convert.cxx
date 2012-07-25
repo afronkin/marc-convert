@@ -31,8 +31,6 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 1.0 (6 May 2012) */
-
 #include <errno.h>
 #include <iconv.h>
 #include <math.h>
@@ -49,11 +47,12 @@
 #include "marcrecord/marcxml_writer.h"
 
 /* Record format variants */
-enum RecordFormat { ISO2709, MARCXML, TEXT };
+enum RecordFormat { FORMAT_NULL, FORMAT_ISO2709, FORMAT_MARCXML, FORMAT_TEXT };
 
 /* Application options structure. */
 struct Options {
 	int verboseLevel;
+	bool permissiveRead;
 	const char *encoding;
 	int skipRecs;
 	int numRecs;
@@ -66,7 +65,9 @@ struct Options {
 };
 
 /* Application options. */
-static struct Options options = { 0, NULL, 0, 0, NULL, NULL, ISO2709, TEXT, NULL, NULL };
+static struct Options options = {
+	0, false, NULL, 0, 0, NULL, NULL,
+	FORMAT_ISO2709, FORMAT_TEXT, NULL, NULL };
 
 /* Convert encoding for MarcRecord. */
 bool iconvRecord(iconv_t iconvDesc, MarcRecord &record);
@@ -123,10 +124,10 @@ bool convertFile(void)
 		MarcXmlReader marcXmlReader;
 
 		switch (options.inputFormat) {
-		case ISO2709:
+		case FORMAT_ISO2709:
 			marcReader.open(inputFile);
 			break;
-		case MARCXML:
+		case FORMAT_MARCXML:
 			marcXmlReader.open(inputFile);
 			break;
 		default:
@@ -138,14 +139,14 @@ bool convertFile(void)
 		MarcXmlWriter marcXmlWriter;
 
 		switch (options.outputFormat) {
-		case ISO2709:
+		case FORMAT_ISO2709:
 			marcWriter.open(outputFile);
 			break;
-		case MARCXML:
+		case FORMAT_MARCXML:
 			marcXmlWriter.open(outputFile, options.outputEncoding);
 			marcXmlWriter.writeHeader();
 			break;
-		case TEXT:
+		case FORMAT_TEXT:
 			break;
 		default:
 			throw std::string("wrong input format specified");
@@ -164,65 +165,87 @@ bool convertFile(void)
 			/* Read record from input file. */
 			MarcRecord record;
 			bool readStatus;
+			bool exitFlag = false;
 
 			switch (options.inputFormat) {
-			case ISO2709:
+			case FORMAT_ISO2709:
 				readStatus = marcReader.next(record);
-				if (!readStatus && marcReader.getErrorCode()
-					!= MarcReader::END_OF_FILE)
-				{
-					throw marcReader.getErrorMessage();
+				if (!readStatus) {
+					switch (marcReader.getErrorCode()) {
+					case MarcReader::END_OF_FILE:
+						exitFlag = true;
+						break;
+					case MarcReader::ERROR_INVALID_RECORD:
+						if (options.permissiveRead) {
+							numBadRecs++;
+						} else {
+							throw marcReader.getErrorMessage();
+						}
+						break;
+					default:
+						throw marcReader.getErrorMessage();
+					}
 				}
 				break;
-			case MARCXML:
+			case FORMAT_MARCXML:
 				readStatus = marcXmlReader.next(record);
-				if (!readStatus && marcXmlReader.getErrorCode()
-					!= MarcXmlReader::END_OF_FILE)
-				{
-					throw marcXmlReader.getErrorMessage();
+				if (!readStatus) {
+					switch (marcXmlReader.getErrorCode()) {
+					case MarcXmlReader::END_OF_FILE:
+						exitFlag = true;
+						break;
+					default:
+						throw marcXmlReader.getErrorMessage();
+					}
 				}
 				break;
 			default:
 				throw std::string("unknown input format");
 			}
 
-			/* Exit when end of file reached. */
-			if (!readStatus) {
+			/* Exit when flag is set (typically when end of file reached). */
+			if (exitFlag) {
 				break;
 			}
 
-			/* Convert record encoding. */
-			if (iconvDesc != (iconv_t) -1) {
-				if (!iconvRecord(iconvDesc, record)) {
-					throw std::string("can't convert record encoding");
-				}
-			}
-
-			/* Write record to output file. */
-			if (recNo > options.skipRecs) {
-				numConvertedRecs++;
-
-				switch (options.outputFormat) {
-				case ISO2709:
-					marcWriter.write(record);
-					break;
-				case MARCXML:
-					marcXmlWriter.write(record);
-					break;
-				case TEXT:
-					/* Write record header. */
-					if (numConvertedRecs > 1) {
-						fprintf(outputFile, "\nRecord %d\n", recNo);
-					} else {
-						fprintf(outputFile, "Record %d\n", recNo);
+			/* Check if record readed successfully. */
+			if (readStatus) {
+				/* Convert record encoding. */
+				if (iconvDesc != (iconv_t) -1) {
+					if (!iconvRecord(iconvDesc, record)) {
+						throw std::string("can't convert record encoding");
 					}
+				}
 
-					/* Write record. */
-					std::string textRecord = record.toString();
-					fwrite(textRecord.c_str(), textRecord.size(), 1,
-						outputFile);
-					putc('\n', outputFile);
-					break;
+				/* Write record to output file. */
+				if (recNo > options.skipRecs) {
+					numConvertedRecs++;
+					std::string textRecord;
+
+					switch (options.outputFormat) {
+					case FORMAT_ISO2709:
+						marcWriter.write(record);
+						break;
+					case FORMAT_MARCXML:
+						marcXmlWriter.write(record);
+						break;
+					case FORMAT_TEXT:
+						/* Write record header. */
+						if (numConvertedRecs > 1) {
+							fprintf(outputFile, "\nRecord %d\n", recNo);
+						} else {
+							fprintf(outputFile, "Record %d\n", recNo);
+						}
+
+						/* Write record. */
+						textRecord = record.toString();
+						fwrite(textRecord.c_str(), textRecord.size(), 1,
+							outputFile);
+						putc('\n', outputFile);
+						break;
+					default:
+						throw std::string("unknown output format");
+					}
 				}
 			}
 
@@ -239,7 +262,7 @@ bool convertFile(void)
 		}
 
 		/* Write MARCXML footer to output file. */
-		if (options.outputFormat == MARCXML) {
+		if (options.outputFormat == FORMAT_MARCXML) {
 			marcXmlWriter.writeFooter();
 		}
 
@@ -278,6 +301,9 @@ bool convertFile(void)
 		}
 	} catch (std::string errorMessage) {
 		/* Print error message. */
+		if (options.verboseLevel > 1) {
+			fputc('\n', stderr);
+		}
 		fprintf(stderr, "Error: %s.\n", errorMessage.c_str());
 
 		/* Finalize iconv. */
@@ -374,12 +400,14 @@ bool parseFormatString(const char *formatString, RecordFormat *format, const cha
 
 	/* Convert format name to format code. */
 	const char *arg = formatString;
-	if (strcmp(arg, "iso2709") == 0 || strncmp(arg, "iso2709,", 8) == 0) {
-		*format = ISO2709;
+	if (strlen(arg) == 0 || arg[0] == ',') {
+		*format = FORMAT_NULL;
+	} else if (strcmp(arg, "iso2709") == 0 || strncmp(arg, "iso2709,", 8) == 0) {
+		*format = FORMAT_ISO2709;
 	} else if (strcmp(arg, "marcxml") == 0 || strncmp(arg, "marcxml,", 8) == 0) {
-		*format = MARCXML;
+		*format = FORMAT_MARCXML;
 	} else if (strcmp(arg, "text") == 0 || strncmp(arg, "text,", 5) == 0) {
-		*format = TEXT;
+		*format = FORMAT_TEXT;
 	} else {
 		return false;
 	}
@@ -400,25 +428,26 @@ void print_help(void)
 {
 	int i;
 	const char *help[] = {
-		"marc-convert 1.0 (6 May 2012)\n",
+		"marc-convert 1.1 (25 Jul 2012)\n",
 		"Convert MARC records between different formats and encodings.\n",
 		"Copyright (C) 2012  Alexander Fronkin\n",
 		"\n",
-		"usage: marc-convert [-hv]\n",
-		"                    [-f <format>[,<encoding>]] [-t <format>[,<encoding>]]\n",
+		"usage: marc-convert [-hpv]\n",
+		"                    [-f [<format>][,<encoding>]] [-t [<format>][,<encoding>]]\n",
 		"                    [-s <number of records>] [-n <number of records>]\n",
 		"                    [-o <output file>] [<input file>]\n",
 		"\n",
-		"  -h --help      give this help\n",
-		"  -f --from      format and encoding of records in input file\n",
-		"                 formats: 'iso2709' (default), 'marcxml'\n",
-		"  -n --numrecs   number of records to convert\n",
-		"  -o --output    name of output file ('-' for stdout)\n",
-		"  -s --skiprecs  number of records to skip\n",
-		"  -t --to        format and encoding of records in output file\n",
-		"                 formats: 'iso2709', 'marcxml', 'text' (default)\n",
-		"  -v --verbose   increase verbosity level (can be specified multiple times)\n",
-		"  <input file>   name of input file ('-' for stdin)\n",
+		"  -h --help        give this help\n",
+		"  -f --from        format and encoding of records in input file\n",
+		"                   formats: 'iso2709' (default), 'marcxml'\n",
+		"  -n --numrecs     number of records to convert\n",
+		"  -o --output      name of output file ('-' for stdout)\n",
+		"  -p --permissive  permissive reading (skip minor errors)\n",
+		"  -s --skiprecs    number of records to skip\n",
+		"  -t --to          format and encoding of records in output file\n",
+		"                   formats: 'iso2709', 'marcxml', 'text' (default)\n",
+		"  -v --verbose     increase verbosity level (can be specified multiple times)\n",
+		"  <input file>     name of input file ('-' for stdin)\n",
 		"\n",
 		NULL};
 
@@ -473,6 +502,9 @@ int main(int argc, char *argv[])
 					options.outputFileName = argv[++argNo];
 					p = (char *) "-";
 					break;
+				case 'p':
+					options.permissiveRead = true;
+					break;
 				case 's':
 					if (argNo + 1 >= argc) {
 						fprintf(stderr, "Error: number of records to skip "
@@ -521,6 +553,8 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 			options.outputFileName = strchr(argv[argNo], '=') + 1;
+		} else if (strcmp(argv[argNo], "--permissive") == 0) {
+			options.permissiveRead = true;
 		} else if (strncmp(argv[argNo], "--skiprecs", 10) == 0) {
 			if (strchr(argv[argNo], '=') == NULL) {
 				fprintf(stderr,
@@ -551,6 +585,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Error: wrong format string '%s' specified.\n", fromInfo);
 		return 1;
 	}
+	if (options.inputFormat == FORMAT_NULL) {
+		options.inputFormat = FORMAT_ISO2709;
+	}
 	
 	/* Parse output format and encoding. */
 	if (toInfo
@@ -558,6 +595,9 @@ int main(int argc, char *argv[])
 	{
 		fprintf(stderr, "Error: wrong format string '%s' specified.\n", toInfo);
 		return 1;
+	}
+	if (options.outputFormat == FORMAT_NULL) {
+		options.outputFormat = FORMAT_TEXT;
 	}
 
 	/* Convert file. */

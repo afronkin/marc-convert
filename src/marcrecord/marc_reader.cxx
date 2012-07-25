@@ -194,7 +194,7 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 		{
 			m_errorCode = ERROR_INVALID_RECORD;
 			m_errorMessage = "invalid record length";
-			throw;
+			throw m_errorCode;
 		}
 
 		/* Copy record leader. */
@@ -208,7 +208,7 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 		{
 			m_errorCode = ERROR_INVALID_RECORD;
 			m_errorMessage = "invalid base address of data";
-			throw;
+			throw m_errorCode;
 		}
 
 		/* Get number of fields. */
@@ -219,7 +219,7 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 		{
 			m_errorCode = ERROR_INVALID_RECORD;
 			m_errorMessage = "invalid record length";
-			throw;
+			throw m_errorCode;
 		}
 
 		/* Parse list of fields. */
@@ -233,7 +233,7 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 			{
 				m_errorCode = ERROR_INVALID_RECORD;
 				m_errorMessage = "invalid directory entry";
-				throw;
+				throw m_errorCode;
 			}
 
 			/* Parse directory entry. */
@@ -245,14 +245,14 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 			{
 				m_errorCode = ERROR_INVALID_RECORD;
 				m_errorMessage = "invalid base address of data";
-				throw;
+				throw m_errorCode;
 			}
 
 			/* Check field starting position and length. */
 			if (baseAddress + fieldStartPos + fieldLength > recordLen) {
 				m_errorCode = ERROR_INVALID_RECORD;
 				m_errorMessage = "invalid field starting position or length";
-				throw;
+				throw m_errorCode;
 			}
 
 			/* Parse field. */
@@ -261,7 +261,7 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 			/* Append field to list. */
 			record.m_fieldList.push_back(field);
 		}
-	} catch (...) {
+	} catch (ErrorCode errorCode) {
 		record.clear();
 		return false;
 	}
@@ -291,7 +291,7 @@ MarcRecord::Field MarcReader::parseField(const std::string &fieldTag,
 		if (fieldLength < 2) {
 			m_errorCode = ERROR_INVALID_RECORD;
 			m_errorMessage = "invalid length of data field";
-			throw;
+			throw m_errorCode;
 		}
 
 		/* Parse data field. */
