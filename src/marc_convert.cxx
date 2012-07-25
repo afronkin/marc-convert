@@ -335,6 +335,14 @@ bool iconvRecord(iconv_t iconvDesc, MarcRecord &record)
 	for (MarcRecord::FieldRefIt fieldIt = fieldList.begin();
 		fieldIt != fieldList.end(); fieldIt++)
 	{
+		/* Convert field tag. */
+		std::string &fieldTag = (*fieldIt)->getTag();
+		std::string fieldTagRecoded;
+		if (!iconv(iconvDesc, fieldTag, fieldTagRecoded)) {
+			return false;
+		}
+		fieldTag = fieldTagRecoded;
+
 		if ((*fieldIt)->isControlField()) {
 			/* Convert data of control field. */
 			std::string &fieldData = (*fieldIt)->getData();
@@ -344,6 +352,16 @@ bool iconvRecord(iconv_t iconvDesc, MarcRecord &record)
 			}
 			fieldData = fieldDataRecoded;
 		} else {
+			/* Convert indicators of data field. */
+			std::string fieldInd, fieldIndRecoded;
+			fieldInd += (*fieldIt)->getInd1();
+			fieldInd += (*fieldIt)->getInd2();
+			if (!iconv(iconvDesc, fieldInd, fieldIndRecoded)) {
+				return false;
+			}
+			(*fieldIt)->setInd1(fieldIndRecoded[0]);
+			(*fieldIt)->setInd2(fieldIndRecoded[1]);
+
 			/* Get list of specified subfields from field. */
 			MarcRecord::SubfieldRefList subfieldList = (*fieldIt)->getSubfields();
 			/* Convert data of subfields. */
