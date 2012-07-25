@@ -55,6 +55,22 @@ void MarcRecord::Subfield::clear(void)
 }
 
 /*
+ * Get identifier of subfield.
+ */
+char & MarcRecord::Subfield::getId(void)
+{
+	return m_id;
+}
+
+/*
+ * Set identifier of subfield.
+ */
+void MarcRecord::Subfield::setId(const char &id)
+{
+	m_id = id;
+}
+
+/*
  * Get data of subfield.
  */
 std::string & MarcRecord::Subfield::getData(void)

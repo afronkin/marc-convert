@@ -298,6 +298,11 @@ public:
 	/* Clear subfield data. */
 	void clear(void);
 
+	/* Get identifier of subfield. */
+	char & getId(void);
+	/* Set identifier of subfield. */
+	void setId(const char &id);
+
 	/* Get data of subfield. */
 	std::string & getData(void);
 	/* Set data of subfield. */

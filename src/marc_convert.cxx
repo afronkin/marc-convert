@@ -335,13 +335,13 @@ bool iconvRecord(iconv_t iconvDesc, MarcRecord &record)
 	for (MarcRecord::FieldRefIt fieldIt = fieldList.begin();
 		fieldIt != fieldList.end(); fieldIt++)
 	{
-		/* Convert field tag. */
+		/* Replace incorrect characters in field tag to '?'. */
 		std::string &fieldTag = (*fieldIt)->getTag();
-		std::string fieldTagRecoded;
-		if (!iconv(iconvDesc, fieldTag, fieldTagRecoded)) {
-			return false;
+		for (std::string::iterator it = fieldTag.begin(); it != fieldTag.end(); it++) {
+			if (*it < '0' || *it > '9') {
+				*it = '?';
+			}
 		}
-		fieldTag = fieldTagRecoded;
 
 		if ((*fieldIt)->isControlField()) {
 			/* Convert data of control field. */
@@ -352,22 +352,35 @@ bool iconvRecord(iconv_t iconvDesc, MarcRecord &record)
 			}
 			fieldData = fieldDataRecoded;
 		} else {
-			/* Convert indicators of data field. */
-			std::string fieldInd, fieldIndRecoded;
-			fieldInd += (*fieldIt)->getInd1();
-			fieldInd += (*fieldIt)->getInd2();
-			if (!iconv(iconvDesc, fieldInd, fieldIndRecoded)) {
-				return false;
+			/* Replace incorrect field indicators to '?'. */
+			char &fieldInd1 = (*fieldIt)->getInd1();
+			if ((fieldInd1 != ' ') && (fieldInd1 < '0' || fieldInd1 > '9')
+				&& (fieldInd1 < 'a' || fieldInd1 > 'z'))
+			{
+				fieldInd1 = '?';
 			}
-			(*fieldIt)->setInd1(fieldIndRecoded[0]);
-			(*fieldIt)->setInd2(fieldIndRecoded[1]);
+
+			char &fieldInd2 = (*fieldIt)->getInd2();
+			if ((fieldInd2 != ' ') && (fieldInd2 < '0' || fieldInd2 > '9')
+				&& (fieldInd2 < 'a' || fieldInd2 > 'z'))
+			{
+				fieldInd2 = '?';
+			}
 
 			/* Get list of specified subfields from field. */
 			MarcRecord::SubfieldRefList subfieldList = (*fieldIt)->getSubfields();
-			/* Convert data of subfields. */
 			for (MarcRecord::SubfieldRefIt subfieldIt = subfieldList.begin();
 				subfieldIt != subfieldList.end();  subfieldIt++)
 			{
+				/* Replace incorrect subfield id to '?'. */
+				char &subfieldId = (*subfieldIt)->getId();
+				if ((subfieldId < '0' || subfieldId > '9')
+					&& (subfieldId < 'a' || subfieldId > 'z'))
+				{
+					subfieldId = '?';
+				}
+
+				/* Convert data of subfields. */
 				std::string &subfieldData = (*subfieldIt)->getData();
 				std::string subfieldDataRecoded;
 				if (!iconv(iconvDesc, subfieldData, subfieldDataRecoded)) {
