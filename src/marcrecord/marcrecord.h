@@ -57,7 +57,6 @@ public:
 		ERROR = -1
 	};
 
-	#pragma pack(push)
 	#pragma pack(1)
 
 	/* Structure of MARC record leader. */
@@ -96,7 +95,7 @@ public:
 		char undefined3;
 	};
 
-	#pragma pack(pop)
+	#pragma pack()
 
 	/* MARC field class. */
 	class Field;
@@ -132,12 +131,12 @@ public:
 
 private:
 	/* Variant of record format. */
-	FormatVariant formatVariant;
+	FormatVariant m_formatVariant;
 
 	/* Record leader. */
-	Leader leader;
+	Leader m_leader;
 	/* List of fields. */
-	FieldList fieldList;
+	FieldList m_fieldList;
 
 public:
 	/* Constructors and destructor. */
@@ -185,7 +184,7 @@ public:
 	/* Return null field value. */
 	inline FieldIt nullField(void)
 	{
-		return fieldList.end();
+		return m_fieldList.end();
 	}
 };
 
@@ -202,18 +201,18 @@ public:
 
 public:
 	/* Type of field. */
-	enum Type type;
+	enum Type m_type;
 
 	/* Field tag. */
-	std::string tag;
+	std::string m_tag;
 	/* Indicator 1. */
-	char ind1;
+	char m_ind1;
 	/* Indicator 2. */
-	char ind2;
+	char m_ind2;
 	/* Data of control field. */
-	std::string data;
+	std::string m_data;
 	/* List of regular subfields. */
-	SubfieldList subfieldList;
+	SubfieldList m_subfieldList;
 
 public:
 	/* Constructors. */
@@ -245,7 +244,7 @@ public:
 	/* Set indicator 1 of data field. */
 	void setInd1(const char ind1);
 	/* Set indicator 2 of data field. */
-	void setInd2(const char ind1);
+	void setInd2(const char ind2);
 
 	/* Get data of control field. */
 	std::string & getData(void);
@@ -275,7 +274,7 @@ public:
 	/* Return null subfield value. */
 	inline SubfieldIt nullSubfield()
 	{
-		return subfieldList.end();
+		return m_subfieldList.end();
 	}
 
 	/* Format field to string for printing. */
@@ -288,9 +287,9 @@ public:
 class MarcRecord::Subfield {
 public:
 	/* Subfield identifier. */
-	char id;
+	char m_id;
 	/* Subfield data. */
-	std::string data;
+	std::string m_data;
 
 public:
 	/* Constructor. */

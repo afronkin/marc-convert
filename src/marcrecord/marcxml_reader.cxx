@@ -44,6 +44,7 @@
 #include "marcxml_reader_encodings.h"
 #endif /* MARCRECORD_EXPAT_UTF8 */
 
+extern "C" { 
 /* XML start element handler for expat library. */
 void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML_Char **atts);
 /* XML end element handler for expat library. */
@@ -52,6 +53,7 @@ void XMLCALL marcXmlEndElement(void *userData, const XML_Char *name);
 void XMLCALL marcXmlCharacterData(void *userData, const XML_Char *s, int len);
 /* XML unknown encoding handler for expat library. */
 int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Encoding *info);
+}
 
 /*
  * Constructor.
@@ -63,7 +65,7 @@ MarcXmlReader::MarcXmlReader(FILE *inputFile, const char *inputEncoding)
 		open(inputFile, inputEncoding);
 	} else {
 		/* Clear object state. */
-		xmlParser = NULL;
+		m_xmlParser = NULL;
 		close();
 	}
 }
@@ -82,7 +84,7 @@ MarcXmlReader::~MarcXmlReader()
  */
 MarcXmlReader::ErrorCode MarcXmlReader::getErrorCode(void)
 {
-	return errorCode;
+	return m_errorCode;
 }
 
 /*
@@ -90,7 +92,7 @@ MarcXmlReader::ErrorCode MarcXmlReader::getErrorCode(void)
  */
 std::string & MarcXmlReader::getErrorMessage(void)
 {
-	return errorMessage;
+	return m_errorMessage;
 }
 
 /*
@@ -99,27 +101,27 @@ std::string & MarcXmlReader::getErrorMessage(void)
 void MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
 {
 	/* Clear error code and message. */
-	errorCode = OK;
-	errorMessage = "";
+	m_errorCode = OK;
+	m_errorMessage = "";
 
 	/* Initialize input stream parameters. */
-	this->inputFile = inputFile == NULL ? stdin : inputFile;
-	this->inputEncoding = inputEncoding == NULL ? "" : inputEncoding;
+	m_inputFile = inputFile == NULL ? stdin : inputFile;
+	m_inputEncoding = inputEncoding == NULL ? "" : inputEncoding;
 
 	/* Create XML parser. */
-	xmlParser = XML_ParserCreate(inputEncoding);
-	XML_SetUserData(xmlParser, &parserState);
-	XML_SetElementHandler(xmlParser, marcXmlStartElement, marcXmlEndElement);
-	XML_SetCharacterDataHandler(xmlParser, marcXmlCharacterData);
-	XML_SetUnknownEncodingHandler(xmlParser, marcXmlUnknownEncoding, NULL);
+	m_xmlParser = XML_ParserCreate(inputEncoding);
+	XML_SetUserData(m_xmlParser, &m_parserState);
+	XML_SetElementHandler(m_xmlParser, marcXmlStartElement, marcXmlEndElement);
+	XML_SetCharacterDataHandler(m_xmlParser, marcXmlCharacterData);
+	XML_SetUnknownEncodingHandler(m_xmlParser, marcXmlUnknownEncoding, NULL);
 
 	/* Initialize XML parser state. */
-	parserState.xmlParser = xmlParser;
-	parserState.done = false;
-	parserState.paused = false;
-	parserState.parentTag = "";
-	parserState.record = NULL;
-	parserState.characterData.erase();
+	m_parserState.xmlParser = m_xmlParser;
+	m_parserState.done = false;
+	m_parserState.paused = false;
+	m_parserState.parentTag = "";
+	m_parserState.record = NULL;
+	m_parserState.characterData.erase();
 }
 
 /*
@@ -128,28 +130,28 @@ void MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
 void MarcXmlReader::close(void)
 {
 	/* Free XML parser. */
-	if (xmlParser) {
-		XML_ParserFree(xmlParser);
+	if (m_xmlParser) {
+		XML_ParserFree(m_xmlParser);
 	}
 
 	/* Clear error code and message. */
-	errorCode = OK;
-	errorMessage = "";
+	m_errorCode = OK;
+	m_errorMessage = "";
 
 	/* Clear input stream parameters. */
-	this->inputFile = NULL;
-	this->inputEncoding = "";
+	m_inputFile = NULL;
+	m_inputEncoding = "";
 
 	/* Clear XML parser. */
-	xmlParser = NULL;
+	m_xmlParser = NULL;
 
 	/* Clear XML parser state. */
-	parserState.xmlParser = NULL;
-	parserState.done = false;
-	parserState.paused = false;
-	parserState.parentTag = "";
-	parserState.record = NULL;
-	parserState.characterData.erase();
+	m_parserState.xmlParser = NULL;
+	m_parserState.done = false;
+	m_parserState.paused = false;
+	m_parserState.parentTag = "";
+	m_parserState.record = NULL;
+	m_parserState.characterData.erase();
 }
 
 /*
@@ -160,39 +162,40 @@ bool MarcXmlReader::next(MarcRecord &record)
 	enum XML_Status parserResult;
 
 	/* Clear error code and message. */
-	errorCode = OK;
-	errorMessage = "";
+	m_errorCode = OK;
+	m_errorMessage = "";
 
 	/* Clear record and initialize record pointer. */
 	record.clear();
-	parserState.record = &record;
+	m_parserState.record = &record;
 
 	/* Parse MARCXML file. */
 	do {
-		if (parserState.paused) {
+		if (m_parserState.paused) {
 			/* Resume stopped parser. */
-			parserState.paused = false;
-			parserResult = XML_ResumeParser(xmlParser);
+			m_parserState.paused = false;
+			parserResult = XML_ResumeParser(m_xmlParser);
 		} else {
 			/* Read and parse buffer from file. */
-			size_t dataLength = (int) fread(buffer, 1, sizeof(buffer), inputFile);
-			parserState.done = dataLength < sizeof(buffer);
-			parserResult = XML_Parse(xmlParser, buffer, dataLength, parserState.done);
+			size_t dataLength = (int) fread(m_buffer, 1, sizeof(m_buffer), m_inputFile);
+			m_parserState.done = dataLength < sizeof(m_buffer);
+			parserResult = XML_Parse(m_xmlParser, m_buffer, dataLength,
+				m_parserState.done);
 		}
 
 		/* Handle parser errors. */
 		if (parserResult == XML_STATUS_ERROR) {
 			record.clear();
-			parserState.parentTag = "";
-			errorCode = ERROR_XML_PARSER;
-			errorMessage = XML_ErrorString(XML_GetErrorCode(xmlParser));
+			m_parserState.parentTag = "";
+			m_errorCode = ERROR_XML_PARSER;
+			m_errorMessage = XML_ErrorString(XML_GetErrorCode(m_xmlParser));
 			return false;
 		}
-	} while (!parserState.done && !parserState.paused);
+	} while (!m_parserState.done && !m_parserState.paused);
 
 	/* Finish if parser wasn't paused (means there is no more tags 'record'). */
-	if (!parserState.paused) {
-		errorCode = END_OF_FILE;
+	if (!m_parserState.paused) {
+		m_errorCode = END_OF_FILE;
 		return false;
 	}
 

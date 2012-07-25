@@ -68,8 +68,8 @@ MarcXmlWriter::~MarcXmlWriter()
 void MarcXmlWriter::open(FILE *outputFile, const char *outputEncoding)
 {
 	/* Initialize output stream parameters. */
-	this->outputFile = outputFile == NULL ? stdout : outputFile;
-	this->outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
+	m_outputFile = outputFile == NULL ? stdout : outputFile;
+	m_outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
 }
 
 /*
@@ -78,8 +78,8 @@ void MarcXmlWriter::open(FILE *outputFile, const char *outputEncoding)
 void MarcXmlWriter::close(void)
 {
 	/* Clear output stream parameters. */
-	this->outputFile = NULL;
-	this->outputEncoding = "";
+	m_outputFile = NULL;
+	m_outputEncoding = "";
 }
 
 /*
@@ -88,15 +88,15 @@ void MarcXmlWriter::close(void)
 void MarcXmlWriter::writeHeader(void)
 {
 	/* Write XML header. */
-	if (outputEncoding != "") {
-		fprintf(outputFile, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
-			outputEncoding.c_str());
+	if (m_outputEncoding != "") {
+		fprintf(m_outputFile, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
+			m_outputEncoding.c_str());
 	} else {
-		fputs("<?xml version=\"1.0\"?>\n", outputFile);
+		fputs("<?xml version=\"1.0\"?>\n", m_outputFile);
 	}
 
 	/* Write tag '<collection>'. */
-	fputs("<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n", outputFile);
+	fputs("<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n", m_outputFile);
 }
 
 /*
@@ -105,7 +105,7 @@ void MarcXmlWriter::writeHeader(void)
 void MarcXmlWriter::writeFooter(void)
 {
 	/* Write tag '</collection>'. */
-	fputs("</collection>\n", outputFile);
+	fputs("</collection>\n", m_outputFile);
 }
 
 /*
@@ -114,45 +114,47 @@ void MarcXmlWriter::writeFooter(void)
 bool MarcXmlWriter::write(MarcRecord &record)
 {
 	/* Write tag '<record>'. */
-	fputs("  <record>\n", outputFile);
+	fputs("  <record>\n", m_outputFile);
 
 	/* Write record leader. */
-	fprintf(outputFile, "    <leader>     %.*s</leader>\n",
-		(int) sizeof(struct MarcRecord::Leader) - 5, (char *) &record.leader + 5);
+	fprintf(m_outputFile, "    <leader>     %.*s</leader>\n",
+		(int) sizeof(struct MarcRecord::Leader) - 5, (char *) &record.m_leader + 5);
 
 	/* Iterate all fields. */
-	for (MarcRecord::FieldIt fieldIt = record.fieldList.begin();
-		fieldIt != record.fieldList.end(); fieldIt++)
+	for (MarcRecord::FieldIt fieldIt = record.m_fieldList.begin();
+		fieldIt != record.m_fieldList.end(); fieldIt++)
 	{
 		std::string xmlData;
 
-		if (fieldIt->tag < "010") {
+		if (fieldIt->m_tag < "010") {
 			/* Write control field. */
-			xmlData = serialize_xml(fieldIt->data);
-			fprintf(outputFile, "    <controlfield tag=\"%s\">%.*s</controlfield>\n",
-				fieldIt->tag.c_str(), (int) xmlData.size(), xmlData.c_str());
+			xmlData = serialize_xml(fieldIt->m_data);
+			fprintf(m_outputFile, "    <controlfield tag=\"%s\">%.*s</controlfield>\n",
+				fieldIt->m_tag.c_str(), (int) xmlData.size(), xmlData.c_str());
 		} else {
 			/* Write tag '<datafield>'. */
-			fprintf(outputFile, "    <datafield tag=\"%s\" ind1=\"%c\" ind2=\"%c\">\n",
-				fieldIt->tag.c_str(), fieldIt->ind1, fieldIt->ind2);
+			fprintf(m_outputFile,
+				"    <datafield tag=\"%s\" ind1=\"%c\" ind2=\"%c\">\n",
+				fieldIt->m_tag.c_str(), fieldIt->m_ind1, fieldIt->m_ind2);
 
 			/* Iterate all subfields. */
-			for (MarcRecord::SubfieldIt subfieldIt = fieldIt->subfieldList.begin();
-				subfieldIt != fieldIt->subfieldList.end(); subfieldIt++)
+			for (MarcRecord::SubfieldIt subfieldIt = fieldIt->m_subfieldList.begin();
+				subfieldIt != fieldIt->m_subfieldList.end(); subfieldIt++)
 			{
 				/* Write subfield. */
-				xmlData = serialize_xml(subfieldIt->data);
-				fprintf(outputFile, "      <subfield code=\"%c\">%.*s</subfield>\n",
-					subfieldIt->id, (int) xmlData.size(), xmlData.c_str());
+				xmlData = serialize_xml(subfieldIt->m_data);
+				fprintf(m_outputFile,
+					"      <subfield code=\"%c\">%.*s</subfield>\n",
+					subfieldIt->m_id, (int) xmlData.size(), xmlData.c_str());
 			}
 
 			/* Write tag '</datafield>'. */
-			fputs("    </datafield>\n", outputFile);
+			fputs("    </datafield>\n", m_outputFile);
 		}
 	}
 
 	/* Write tag '<record>'. */
-	fputs("  </record>\n", outputFile);
+	fputs("  </record>\n", m_outputFile);
 
 	return true;
 }

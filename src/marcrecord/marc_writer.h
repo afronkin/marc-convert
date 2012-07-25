@@ -45,9 +45,9 @@
 class MarcWriter {
 protected:
 	/* Output ISO 2709 file. */
-	FILE *outputFile;
+	FILE *m_outputFile;
 	/* Encoding of output ISO 2709 file. */
-	std::string outputEncoding;
+	std::string m_outputEncoding;
 
 public:
 	/* Constructor. */

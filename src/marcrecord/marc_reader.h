@@ -53,14 +53,14 @@ public:
 
 protected:
 	/* Code of last error. */
-	ErrorCode errorCode;
+	ErrorCode m_errorCode;
 	/* Message of last error. */
-	std::string errorMessage;
+	std::string m_errorMessage;
 
 	/* Input ISO 2709 file. */
-	FILE *inputFile;
+	FILE *m_inputFile;
 	/* Encoding of input ISO 2709 file. */
-	std::string inputEncoding;
+	std::string m_inputEncoding;
 
 private:
 	/* Parse field from ISO 2709 buffer. */

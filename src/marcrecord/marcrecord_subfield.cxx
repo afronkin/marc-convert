@@ -41,8 +41,8 @@
 MarcRecord::Subfield::Subfield(char id, const std::string &data)
 {
 	clear();
-	this->id = id;
-	this->data = data;
+	m_id = id;
+	m_data = data;
 }
 
 /*
@@ -50,8 +50,8 @@ MarcRecord::Subfield::Subfield(char id, const std::string &data)
  */
 void MarcRecord::Subfield::clear(void)
 {
-	id = ' ';
-	data.erase();
+	m_id = ' ';
+	m_data.erase();
 }
 
 /*
@@ -59,7 +59,7 @@ void MarcRecord::Subfield::clear(void)
  */
 std::string & MarcRecord::Subfield::getData(void)
 {
-	return data;
+	return m_data;
 }
 
 /*
@@ -67,7 +67,7 @@ std::string & MarcRecord::Subfield::getData(void)
  */
 void MarcRecord::Subfield::setData(const std::string &data)
 {
-	this->data = data;
+	m_data = data;
 }
 
 /*
@@ -75,7 +75,7 @@ void MarcRecord::Subfield::setData(const std::string &data)
  */
 bool MarcRecord::Subfield::isEmbedded(void)
 {
-	return (id == '1' ? true : false);
+	return (m_id == '1' ? true : false);
 }
 
 /*
@@ -83,11 +83,11 @@ bool MarcRecord::Subfield::isEmbedded(void)
  */
 std::string MarcRecord::Subfield::getEmbeddedTag(void)
 {
-	if (id != '1') {
+	if (m_id != '1') {
 		return "";
 	}
 
-	return data.substr(0, 3);
+	return m_data.substr(0, 3);
 }
 
 /*
@@ -95,11 +95,11 @@ std::string MarcRecord::Subfield::getEmbeddedTag(void)
  */
 char MarcRecord::Subfield::getEmbeddedInd1(void)
 {
-	if (id != '1' || data.substr(0, 3) < "010") {
+	if (m_id != '1' || m_data.substr(0, 3) < "010") {
 		return '?';
 	}
 
-	return data[3];
+	return m_data[3];
 }
 
 /*
@@ -107,11 +107,11 @@ char MarcRecord::Subfield::getEmbeddedInd1(void)
  */
 char MarcRecord::Subfield::getEmbeddedInd2(void)
 {
-	if (id != '1' || data.substr(0, 3) < "010") {
+	if (m_id != '1' || m_data.substr(0, 3) < "010") {
 		return '?';
 	}
 
-	return data[4];
+	return m_data[4];
 }
 
 /*
@@ -119,9 +119,9 @@ char MarcRecord::Subfield::getEmbeddedInd2(void)
  */
 std::string MarcRecord::Subfield::getEmbeddedData(void)
 {
-	if (id != '1' || data.substr(0, 3) >= "010") {
+	if (m_id != '1' || m_data.substr(0, 3) >= "010") {
 		return "";
 	}
 
-	return data.substr(3);
+	return m_data.substr(3);
 }

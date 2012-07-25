@@ -45,9 +45,9 @@
 class MarcXmlWriter {
 protected:
 	/* Output MARCXML file. */
-	FILE *outputFile;
+	FILE *m_outputFile;
 	/* Encoding of output MARCXML file. */
-	std::string outputEncoding;
+	std::string m_outputEncoding;
 
 public:
 	/* Constructor. */

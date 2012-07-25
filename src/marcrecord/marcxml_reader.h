@@ -67,21 +67,21 @@ public:
 
 protected:
 	/* Code of last error. */
-	ErrorCode errorCode;
+	ErrorCode m_errorCode;
 	/* Message of last error. */
-	std::string errorMessage;
+	std::string m_errorMessage;
 
 	/* Input MARCXML file. */
-	FILE *inputFile;
+	FILE *m_inputFile;
 	/* Encoding of input MARCXML file. */
-	std::string inputEncoding;
+	std::string m_inputEncoding;
 
 	/* XML parser. */
-	XML_Parser xmlParser;
+	XML_Parser m_xmlParser;
 	/* XML parser state. */
-	struct XmlParserState parserState;
+	struct XmlParserState m_parserState;
 	/* Record buffer. */
-	char buffer[4096];
+	char m_buffer[4096];
 
 public:
 	/* Constructor. */

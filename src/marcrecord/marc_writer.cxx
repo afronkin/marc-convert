@@ -42,7 +42,6 @@
 #define ISO2709_FIELD_SEPARATOR		'\x1E'
 #define ISO2709_IDENTIFIER_DELIMITER	'\x1F'
 
-#pragma pack(push)
 #pragma pack(1)
 
 /* Structure of record directory entry. */
@@ -55,7 +54,7 @@ struct RecordDirectoryEntry {
 	char fieldStartingPosition[5];
 };
 
-#pragma pack(pop)
+#pragma pack()
 
 /*
  * Constructor.
@@ -86,8 +85,8 @@ MarcWriter::~MarcWriter()
 void MarcWriter::open(FILE *outputFile, const char *outputEncoding)
 {
 	/* Initialize output stream parameters. */
-	this->outputFile = outputFile == NULL ? stdout : outputFile;
-	this->outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
+	m_outputFile = outputFile == NULL ? stdout : outputFile;
+	m_outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
 }
 
 /*
@@ -96,8 +95,8 @@ void MarcWriter::open(FILE *outputFile, const char *outputEncoding)
 void MarcWriter::close(void)
 {
 	/* Clear output stream parameters. */
-	this->outputFile = NULL;
-	this->outputEncoding = "";
+	m_outputFile = NULL;
+	m_outputEncoding = "";
 }
 
 /*
@@ -108,10 +107,10 @@ bool MarcWriter::write(MarcRecord &record)
 	char recordBuf[100000];
 
 	/* Copy record leader to buffer. */
-	memcpy(recordBuf, (char *) &record.leader, sizeof(struct MarcRecord::Leader));
+	memcpy(recordBuf, (char *) &record.m_leader, sizeof(struct MarcRecord::Leader));
 
 	/* Calculate base address of data and copy it to record buffer. */
-	unsigned int baseAddress = sizeof(struct MarcRecord::Leader) + record.fieldList.size()
+	unsigned int baseAddress = sizeof(struct MarcRecord::Leader) + record.m_fieldList.size()
 		* sizeof(struct RecordDirectoryEntry) + 1;
 	char baseAddressBuf[6];
 	sprintf(baseAddressBuf, "%05d", baseAddress);
@@ -120,31 +119,31 @@ bool MarcWriter::write(MarcRecord &record)
 	/* Iterate all fields. */
 	char *directoryData = recordBuf + sizeof(struct MarcRecord::Leader);
 	char *fieldData = recordBuf + baseAddress;
-	for (MarcRecord::FieldIt fieldIt = record.fieldList.begin();
-		fieldIt != record.fieldList.end(); fieldIt++)
+	for (MarcRecord::FieldIt fieldIt = record.m_fieldList.begin();
+		fieldIt != record.m_fieldList.end(); fieldIt++)
 	{
 		int fieldLength = 0;
-		if (fieldIt->tag < "010") {
+		if (fieldIt->m_tag < "010") {
 			/* Copy control field to buffer. */
-			fieldLength = fieldIt->data.size();
-			memcpy(fieldData, fieldIt->data.c_str(), fieldLength);
+			fieldLength = fieldIt->m_data.size();
+			memcpy(fieldData, fieldIt->m_data.c_str(), fieldLength);
 			fieldData += fieldLength;
 		} else {
 			/* Copy indicators of data field to buffer. */
-			*(fieldData++) = fieldIt->ind1;
-			*(fieldData++) = fieldIt->ind2;
+			*(fieldData++) = fieldIt->m_ind1;
+			*(fieldData++) = fieldIt->m_ind2;
 			fieldLength += 2;
 
 			/* Iterate all subfields. */
-			for (MarcRecord::SubfieldIt subfieldIt = fieldIt->subfieldList.begin();
-				subfieldIt != fieldIt->subfieldList.end(); subfieldIt++)
+			for (MarcRecord::SubfieldIt subfieldIt = fieldIt->m_subfieldList.begin();
+				subfieldIt != fieldIt->m_subfieldList.end(); subfieldIt++)
 			{
-				int subfieldLength = subfieldIt->data.size();
+				int subfieldLength = subfieldIt->m_data.size();
 
 				/* Copy subfield to buffer. */
 				*(fieldData++) = ISO2709_IDENTIFIER_DELIMITER;
-				*(fieldData++) = subfieldIt->id;
-				memcpy(fieldData, subfieldIt->data.c_str(), subfieldLength);
+				*(fieldData++) = subfieldIt->m_id;
+				memcpy(fieldData, subfieldIt->m_data.c_str(), subfieldLength);
 				fieldData += subfieldLength;
 				fieldLength += subfieldLength + 2;
 			}
@@ -156,7 +155,7 @@ bool MarcWriter::write(MarcRecord &record)
 
 		/* Fill directory entry (it is safe to do this way because null character
 		   will be overwritten in next iteration and right after the cycle). */
-		sprintf(directoryData, "%.3s%04d%05d", fieldIt->tag.c_str(), fieldLength,
+		sprintf(directoryData, "%.3s%04d%05d", fieldIt->m_tag.c_str(), fieldLength,
 			(int) (fieldData - recordBuf) - baseAddress - fieldLength);
 		directoryData += sizeof(struct RecordDirectoryEntry);
 	}
@@ -173,7 +172,7 @@ bool MarcWriter::write(MarcRecord &record)
 	memcpy(recordBuf, recordLengthBuf, 5);
 
 	/* Write record buffer to file. */
-	if (fwrite(recordBuf, recordLength, 1, outputFile) != 1) {
+	if (fwrite(recordBuf, recordLength, 1, m_outputFile) != 1) {
 		return false;
 	}
 
