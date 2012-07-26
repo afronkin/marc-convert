@@ -31,11 +31,10 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
 #if !defined(MARC_READER_H)
 #define MARC_READER_H
 
+#include <iconv.h>
 #include <string>
 #include "marcrecord.h"
 
@@ -48,7 +47,8 @@ public:
 	enum ErrorCode {
 		OK = 0,
 		END_OF_FILE = 1,
-		ERROR_INVALID_RECORD = -1
+		ERROR_INVALID_RECORD = -1,
+		ERROR_ICONV = -2
 	};
 
 protected:
@@ -61,6 +61,11 @@ protected:
 	FILE *m_inputFile;
 	/* Encoding of input ISO 2709 file. */
 	std::string m_inputEncoding;
+	/* Iconv descriptor for recoding input file. */
+	iconv_t m_iconvDesc;
+
+	/* Automatic error correction mode. */
+	bool m_autoCorrectMode;
 
 private:
 	/* Parse field from ISO 2709 buffer. */
@@ -78,8 +83,11 @@ public:
 	/* Get last error message. */
 	std::string & getErrorMessage(void);
 
+	/* Set automatic error correction mode. */
+	void setAutoCorrectMode(bool autoCorrectMode = true);
+
 	/* Open input file. */
-	void open(FILE *inputFile, const char *inputEncoding = NULL);
+	bool open(FILE *inputFile, const char *inputEncoding = NULL);
 	/* Close input file. */
 	void close(void);
 

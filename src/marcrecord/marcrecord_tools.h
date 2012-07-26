@@ -31,11 +31,10 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
 #if !defined(MARCRECORD_TOOLS_H)
 #define MARCRECORD_TOOLS_H
 
+#include <iconv.h>
 #include <string>
 
 /* Print formatted output to std::string. */
@@ -44,5 +43,8 @@ int snprintf(std::string &s, size_t n, const char *format, ...);
 std::string serialize_xml(std::string &s);
 /* Verify that all string characters are decimal digits in ASCII encoding. */
 int is_numeric(const char *s, size_t n);
+/* Convert encoding for std::string. */
+bool iconv(iconv_t iconv_desc, const std::string &src, std::string &dest);
+bool iconv(iconv_t iconv_desc, const char *src, size_t len, std::string &dest);
 
 #endif /* MARCRECORD_TOOLS_H */

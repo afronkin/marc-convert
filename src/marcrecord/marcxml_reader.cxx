@@ -31,18 +31,13 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
+#include <iconv.h>
 #include <stdio.h>
 #include <string>
 #include <string.h>
 
 #include "marcrecord.h"
 #include "marcxml_reader.h"
-
-#if defined(MARCRECORD_EXPAT_UTF8)
-#include "marcxml_reader_encodings.h"
-#endif /* MARCRECORD_EXPAT_UTF8 */
 
 extern "C" { 
 /* XML start element handler for expat library. */
@@ -60,6 +55,9 @@ int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Enc
  */
 MarcXmlReader::MarcXmlReader(FILE *inputFile, const char *inputEncoding)
 {
+	/* Clear member variables. */
+	m_autoCorrectMode = false;
+
 	if (inputFile) {
 		/* Open input file and initialize parser. */
 		open(inputFile, inputEncoding);
@@ -93,6 +91,14 @@ MarcXmlReader::ErrorCode MarcXmlReader::getErrorCode(void)
 std::string & MarcXmlReader::getErrorMessage(void)
 {
 	return m_errorMessage;
+}
+
+/*
+ * Set automatic error correction mode.
+ */
+void MarcXmlReader::setAutoCorrectMode(bool autoCorrectMode)
+{
+	m_autoCorrectMode = autoCorrectMode;
 }
 
 /*
@@ -329,21 +335,44 @@ int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Enc
 {
 	(void) (data);
 
-	if (strcmp(encoding, "windows-1251") == 0 || strcmp(encoding, "WINDOWS-1251") == 0) {
-#if defined(MARCRECORD_EXPAT_UTF8)
-		memcpy(info->map, expatEncodingWindows1251, sizeof(int) * 256);
+#if !defined(MARCRECORD_USE_UTF8)
+	for (int i = 0; i < 256; i++) {
+		info->map[i] = i;
+	}
 #else
-		for (int i = 0; i < 256; i++) {
-			info->map[i] = i;
-		}
-#endif /* MARCRECORD_EXPAT_UTF8 */
+	iconv_t iconvDesc = (iconv_t) -1;
+	unsigned char iconvBuf[8];
 
-		info->data = NULL;
-		info->convert = NULL;
-		info->release = NULL;
-
-		return XML_STATUS_OK;
+	iconvDesc = iconv_open("UTF-16BE", encoding);
+	if (iconvDesc == (iconv_t) -1) {
+		return XML_STATUS_ERROR;
 	}
 
-	return XML_STATUS_ERROR;
+	unsigned char i = 0;
+	do {
+		char *src = (char *) &i;
+		char *dest = (char *) iconvBuf;
+		size_t srcLen = 1;
+		size_t destLen = sizeof(iconvBuf);
+
+		if (iconv(iconvDesc, &src, &srcLen, &dest, &destLen) == (size_t) -1) {
+			info->map[i] = -1;
+		} else {
+			int value = 0;
+			for (unsigned char *p = iconvBuf; (char *) p != dest; p++) {
+				value = (value << 8) + *p;
+			}
+
+			info->map[i] = value;
+		}
+	} while (i++ < 255);
+
+	iconv_close(iconvDesc);
+#endif /* MARCRECORD_USE_UTF8 */
+
+	info->data = NULL;
+	info->convert = NULL;
+	info->release = NULL;
+
+	return XML_STATUS_OK;
 }

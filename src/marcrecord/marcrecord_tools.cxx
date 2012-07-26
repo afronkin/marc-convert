@@ -31,8 +31,7 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,4 +110,54 @@ int is_numeric(const char *s, size_t n)
 	}
 
 	return 1;
+}
+
+/*
+ * Convert encoding for std::string.
+ */
+bool iconv(iconv_t iconv_desc, const std::string &src, std::string &dest)
+{
+	char buf[4096];
+	char *p = (char *) src.c_str();
+	size_t src_len = src.size();
+
+	dest = "";
+	while (src_len > 0) {
+		size_t dest_len = sizeof(buf);
+		char *q = buf;
+		if (iconv(iconv_desc, &p, &src_len, &q, &dest_len) == (size_t) -1) {
+			if (errno != E2BIG) {
+				return false;
+			}
+		}
+
+		dest.append(buf, sizeof(buf) - dest_len);
+	}
+
+	return true;
+}
+
+/*
+ * Convert encoding for std::string.
+ */
+bool iconv(iconv_t iconv_desc, const char *src, size_t len, std::string &dest)
+{
+	char buf[4096];
+	char *p = (char *) src;
+	size_t src_len = len;
+
+	dest = "";
+	while (src_len > 0) {
+		size_t dest_len = sizeof(buf);
+		char *q = buf;
+		if (iconv(iconv_desc, &p, &src_len, &q, &dest_len) == (size_t) -1) {
+			if (errno != E2BIG) {
+				return false;
+			}
+		}
+
+		dest.append(buf, sizeof(buf) - dest_len);
+	}
+
+	return true;
 }

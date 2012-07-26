@@ -31,8 +31,7 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include "marcrecord.h"
@@ -62,6 +61,10 @@ struct RecordDirectoryEntry {
  */
 MarcReader::MarcReader(FILE *inputFile, const char *inputEncoding)
 {
+	/* Clear member variables. */
+	m_iconvDesc = (iconv_t) -1;
+	m_autoCorrectMode = false;
+
 	if (inputFile) {
 		/* Open input file. */
 		open(inputFile, inputEncoding);
@@ -97,9 +100,17 @@ std::string & MarcReader::getErrorMessage(void)
 }
 
 /*
+ * Set automatic error correction mode.
+ */
+void MarcReader::setAutoCorrectMode(bool autoCorrectMode)
+{
+	m_autoCorrectMode = autoCorrectMode;
+}
+
+/*
  * Open input file.
  */
-void MarcReader::open(FILE *inputFile, const char *inputEncoding)
+bool MarcReader::open(FILE *inputFile, const char *inputEncoding)
 {
 	/* Clear error code and message. */
 	m_errorCode = OK;
@@ -108,6 +119,25 @@ void MarcReader::open(FILE *inputFile, const char *inputEncoding)
 	/* Initialize input stream parameters. */
 	m_inputFile = inputFile == NULL ? stdin : inputFile;
 	m_inputEncoding = inputEncoding == NULL ? "" : inputEncoding;
+
+	/* Initialize encoding conversion. */
+	if (inputEncoding == NULL) {
+		m_iconvDesc = (iconv_t) -1;
+	} else {
+		/* Create iconv descriptor for input file encoding conversion to UTF-8. */
+		m_iconvDesc = iconv_open("UTF-8", inputEncoding);
+		if (m_iconvDesc == (iconv_t) -1) {
+			m_errorCode = ERROR_ICONV;
+			if (errno == EINVAL) {
+				m_errorMessage = "encoding conversion is not supported";
+			} else {
+				m_errorMessage = "iconv initialization failed";
+			}
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /*
@@ -122,6 +152,12 @@ void MarcReader::close(void)
 	/* Clear input stream parameters. */
 	m_inputFile = NULL;
 	m_inputEncoding = "";
+
+	/* Finalize iconv. */
+	if (m_iconvDesc != (iconv_t) -1) {
+		iconv_close(m_iconvDesc);
+	}
+	m_iconvDesc = (iconv_t) -1;
 }
 
 /*
@@ -200,6 +236,19 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 		/* Copy record leader. */
 		memcpy(&record.m_leader, recordBuf, sizeof(struct MarcRecord::Leader));
 
+		/* Replace incorrect characters in record leader to '?'. */
+		if (m_autoCorrectMode) {
+			for (unsigned int i = 0; i < sizeof(struct MarcRecord::Leader); i++) {
+				char c = *((char *) &record.m_leader + i);
+				if ((c != ' ') && (c != '|')
+					&& (c < '0' || c > '9')
+					&& (c < 'a' || c > 'z'))
+				{
+					*((char *) &record.m_leader + i) = '?';
+				}
+			}
+		}
+
 		/* Get base address of data. */
 		unsigned int baseAddress;
 		if (!is_numeric(record.m_leader.baseAddress, 5)
@@ -275,17 +324,39 @@ bool MarcReader::parse(const char *recordBuf, unsigned int recordBufLen, MarcRec
 MarcRecord::Field MarcReader::parseField(const std::string &fieldTag,
 	const char *fieldData, unsigned int fieldLength)
 {
+	MarcRecord::Field field;
+
 	/* Adjust field length. */
 	if (fieldData[fieldLength - 1] == '\x1E') {
 		fieldLength--;
 	}
 
-	MarcRecord::Field field;
+	/* Copy field tag. */
 	field.m_tag = fieldTag;
+
+	/* Replace incorrect characters in field tag to '?'. */
+	if (m_autoCorrectMode) {
+		for (std::string::iterator it = field.m_tag.begin();
+			it != field.m_tag.end(); it++)
+		{
+			if (*it < '0' || *it > '9') {
+				*it = '?';
+			}
+		}
+	}
+
 	if (fieldTag < "010" || fieldLength < 2) {
 		/* Parse control field. */
 		field.m_type = MarcRecord::Field::CONTROLFIELD;
-		field.m_data.assign(fieldData, fieldLength);
+		if (m_iconvDesc == (iconv_t) -1) {
+			field.m_data.assign(fieldData, fieldLength);
+		} else {
+			if (!iconv(m_iconvDesc, fieldData, fieldLength, field.m_data)) {
+				m_errorCode = ERROR_ICONV;
+				m_errorMessage = "encoding conversion failed";
+				throw m_errorCode;
+			}
+		}
 	} else {
 		/* Check field length. */
 		if (fieldLength < 2) {
@@ -299,6 +370,23 @@ MarcRecord::Field MarcReader::parseField(const std::string &fieldTag,
 		field.m_ind1 = fieldData[0];
 		field.m_ind2 = fieldData[1];
 
+		/* Replace invalid indicators to character '?'. */
+		if (m_autoCorrectMode) {
+			if ((field.m_ind1 != ' ') && (field.m_ind1 != '|')
+				&& (field.m_ind1 < '0' || field.m_ind1 > '9')
+				&& (field.m_ind1 < 'a' || field.m_ind1 > 'z'))
+			{
+				field.m_ind1 = '?';
+			}
+
+			if ((field.m_ind2 != ' ') && (field.m_ind2 != '|')
+				&& (field.m_ind2 < '0' || field.m_ind2 > '9')
+				&& (field.m_ind2 < 'a' || field.m_ind2 > 'z'))
+			{
+				field.m_ind2 = '?';
+			}
+		}
+
 		/* Parse list of subfields. */
 		unsigned int subfieldStartPos = 0;
 		for (unsigned int symbolPos = 2; symbolPos <= fieldLength; symbolPos++) {
@@ -311,10 +399,34 @@ MarcRecord::Field MarcReader::parseField(const std::string &fieldTag,
 				/* Parse regular subfield. */
 				MarcRecord::Subfield subfield;
 				subfield.clear();
+
+				/* Copy subfield identifier. */
 				subfield.m_id = fieldData[subfieldStartPos + 1];
-				subfield.m_data.assign(
-					fieldData + subfieldStartPos + 2,
-					symbolPos - subfieldStartPos - 2);
+				/* Replace invalid subfield identifier to character '?'. */
+				if (m_autoCorrectMode
+					&& (subfield.m_id < '0' || subfield.m_id > '9')
+					&& (subfield.m_id < 'a' || subfield.m_id > 'z'))
+				{
+					subfield.m_id = '?';
+				}
+
+				if (m_iconvDesc == (iconv_t) -1) {
+					/* Copy subfield data. */
+					subfield.m_data.assign(
+						fieldData + subfieldStartPos + 2,
+						symbolPos - subfieldStartPos - 2);
+				} else {
+					/* Copy subfield data with encoding conversion. */
+					if (!iconv(m_iconvDesc,
+						fieldData + subfieldStartPos + 2,
+						symbolPos - subfieldStartPos - 2,
+						subfield.m_data))
+					{
+						m_errorCode = ERROR_ICONV;
+						m_errorMessage = "encoding conversion failed";
+						throw m_errorCode;
+					}
+				}
 
 				/* Append subfield to list. */
 				field.m_subfieldList.push_back(subfield);

@@ -31,8 +31,6 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
 #if !defined(MARC_WRITER_H)
 #define MARC_WRITER_H
 

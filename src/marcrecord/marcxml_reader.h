@@ -31,8 +31,6 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
 #if !defined(MARCXML_READER_H)
 #define MARCXML_READER_H
 
@@ -76,6 +74,9 @@ protected:
 	/* Encoding of input MARCXML file. */
 	std::string m_inputEncoding;
 
+	/* Automatic error correction mode. */
+	bool m_autoCorrectMode;
+
 	/* XML parser. */
 	XML_Parser m_xmlParser;
 	/* XML parser state. */
@@ -93,6 +94,9 @@ public:
 	ErrorCode getErrorCode(void);
 	/* Get last error message. */
 	std::string & getErrorMessage(void);
+
+	/* Set automatic error correction mode. */
+	void setAutoCorrectMode(bool autoCorrectMode = true);
 
 	/* Open input file and initialize parser. */
 	void open(FILE *inputFile, const char *inputEncoding = NULL);

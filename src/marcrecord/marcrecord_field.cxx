@@ -31,8 +31,6 @@
  * OF SUCH DAMAGE.
  */
 
-/* Version: 2.0 (27 Feb 2011) */
-
 #include "marcrecord.h"
 #include "marcrecord_tools.h"
 

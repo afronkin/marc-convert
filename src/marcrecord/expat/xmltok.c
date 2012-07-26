@@ -1373,7 +1373,11 @@ XmlInitUnknownEncoding(void *mem,
       e->utf8[i][0] = 0;
       e->utf16[i] = 0;
     }
+#if defined(MARCRECORD_USE_UTF8)
+    else if (c < 0x80) {
+#else /* MARCRECORD_USE_UTF8 */
     else if (c < 0x100) {
+#endif /* MARCRECORD_USE_UTF8 */
       if (latin1_encoding.type[c] != BT_OTHER
           && latin1_encoding.type[c] != BT_NONXML
           && c != i)

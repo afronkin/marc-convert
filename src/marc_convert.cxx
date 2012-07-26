@@ -32,7 +32,6 @@
  */
 
 #include <errno.h>
-#include <iconv.h>
 #include <math.h>
 /*
 #include <stdio.h>
@@ -69,18 +68,12 @@ static struct Options options = {
 	0, false, NULL, 0, 0, NULL, NULL,
 	FORMAT_ISO2709, FORMAT_TEXT, NULL, NULL };
 
-/* Convert encoding for MarcRecord. */
-bool iconvRecord(iconv_t iconvDesc, MarcRecord &record);
-/* Convert encoding for std::string. */
-bool iconv(iconv_t iconvDesc, const std::string &src, std::string &dest);
-
 /*
  * Convert records from MARC file.
  */
 bool convertFile(void)
 {
 	FILE *inputFile = NULL, *outputFile = NULL;
-	iconv_t iconvDesc = (iconv_t) -1;
 
 	try {
 		/* Open input file. */
@@ -103,32 +96,18 @@ bool convertFile(void)
 			}
 		}
 
-		/* Initialize iconv when specified different input and output encodings. */
-		if (options.inputEncoding && options.outputEncoding
-			&& strcmp(options.inputEncoding, options.outputEncoding) != 0)
-		{
-			iconvDesc = iconv_open(options.outputEncoding, options.inputEncoding);
-			if (iconvDesc == (iconv_t) -1) {
-				if (errno == EINVAL) {
-					throw std::string("conversion from '")
-						+ options.inputEncoding + "' to '"
-						+ options.outputEncoding + "' is not supported";
-				} else {
-					throw std::string("can't initialize iconv");
-				}
-			}
-		}
-
 		/* Open input file in MarcReader or MarcXmlReader. */
 		MarcReader marcReader;
 		MarcXmlReader marcXmlReader;
 
 		switch (options.inputFormat) {
 		case FORMAT_ISO2709:
-			marcReader.open(inputFile);
+			marcReader.open(inputFile, options.inputEncoding);
+			marcReader.setAutoCorrectMode(true);
 			break;
 		case FORMAT_MARCXML:
-			marcXmlReader.open(inputFile);
+			marcXmlReader.open(inputFile, options.inputEncoding);
+			marcXmlReader.setAutoCorrectMode(true);
 			break;
 		default:
 			throw std::string("wrong input format specified");
@@ -140,7 +119,7 @@ bool convertFile(void)
 
 		switch (options.outputFormat) {
 		case FORMAT_ISO2709:
-			marcWriter.open(outputFile);
+			marcWriter.open(outputFile, options.outputEncoding);
 			break;
 		case FORMAT_MARCXML:
 			marcXmlWriter.open(outputFile, options.outputEncoding);
@@ -208,44 +187,35 @@ bool convertFile(void)
 				break;
 			}
 
-			/* Check if record readed successfully. */
-			if (readStatus) {
-				/* Convert record encoding. */
-				if (iconvDesc != (iconv_t) -1) {
-					if (!iconvRecord(iconvDesc, record)) {
-						throw std::string("can't convert record encoding");
+			/* Write record to output file. */
+			if (readStatus && recNo > options.skipRecs) {
+				numConvertedRecs++;
+				std::string textRecord, textRecordRecoded;
+
+				switch (options.outputFormat) {
+				case FORMAT_ISO2709:
+					marcWriter.write(record);
+					break;
+				case FORMAT_MARCXML:
+					marcXmlWriter.write(record);
+					break;
+				case FORMAT_TEXT:
+					/* Write record header. */
+					char recordHeader[30];
+					if (numConvertedRecs > 1) {
+						sprintf(recordHeader, "\nRecord %d\n", recNo);
+					} else {
+						sprintf(recordHeader, "Record %d\n", recNo);
 					}
-				}
 
-				/* Write record to output file. */
-				if (recNo > options.skipRecs) {
-					numConvertedRecs++;
-					std::string textRecord;
+					/* Create text record. */
+					textRecord = recordHeader + record.toString() + "\n";
 
-					switch (options.outputFormat) {
-					case FORMAT_ISO2709:
-						marcWriter.write(record);
-						break;
-					case FORMAT_MARCXML:
-						marcXmlWriter.write(record);
-						break;
-					case FORMAT_TEXT:
-						/* Write record header. */
-						if (numConvertedRecs > 1) {
-							fprintf(outputFile, "\nRecord %d\n", recNo);
-						} else {
-							fprintf(outputFile, "Record %d\n", recNo);
-						}
-
-						/* Write record. */
-						textRecord = record.toString();
-						fwrite(textRecord.c_str(), textRecord.size(), 1,
-							outputFile);
-						putc('\n', outputFile);
-						break;
-					default:
-						throw std::string("unknown output format");
-					}
+					/* Write record. */
+					fwrite(textRecord.c_str(), textRecord.size(), 1, outputFile);
+					break;
+				default:
+					throw std::string("unknown output format");
 				}
 			}
 
@@ -264,12 +234,6 @@ bool convertFile(void)
 		/* Write MARCXML footer to output file. */
 		if (options.outputFormat == FORMAT_MARCXML) {
 			marcXmlWriter.writeFooter();
-		}
-
-		/* Finalize iconv. */
-		if (iconvDesc != (iconv_t) -1) {
-			iconv_close(iconvDesc);
-			iconvDesc = (iconv_t) -1;
 		}
 
 		/* Close files. */
@@ -306,11 +270,6 @@ bool convertFile(void)
 		}
 		fprintf(stderr, "Error: %s.\n", errorMessage.c_str());
 
-		/* Finalize iconv. */
-		if (iconvDesc != (iconv_t) -1) {
-			iconv_close(iconvDesc);
-		}
-
 		/* Close files. */
 		if (inputFile && inputFile != stdin) {
 			fclose(inputFile);
@@ -320,100 +279,6 @@ bool convertFile(void)
 		}
 
 		return false;
-	}
-
-	return true;
-}
-
-/*
- * Convert encoding for MarcRecord.
- */
-bool iconvRecord(iconv_t iconvDesc, MarcRecord &record)
-{
-	/* Get list of specified fields. */
-	MarcRecord::FieldRefList fieldList = record.getFields();
-	for (MarcRecord::FieldRefIt fieldIt = fieldList.begin();
-		fieldIt != fieldList.end(); fieldIt++)
-	{
-		/* Replace incorrect characters in field tag to '?'. */
-		std::string &fieldTag = (*fieldIt)->getTag();
-		for (std::string::iterator it = fieldTag.begin(); it != fieldTag.end(); it++) {
-			if (*it < '0' || *it > '9') {
-				*it = '?';
-			}
-		}
-
-		if ((*fieldIt)->isControlField()) {
-			/* Convert data of control field. */
-			std::string &fieldData = (*fieldIt)->getData();
-			std::string fieldDataRecoded;
-			if (!iconv(iconvDesc, fieldData, fieldDataRecoded)) {
-				return false;
-			}
-			fieldData = fieldDataRecoded;
-		} else {
-			/* Replace incorrect field indicators to '?'. */
-			char &fieldInd1 = (*fieldIt)->getInd1();
-			if ((fieldInd1 != ' ') && (fieldInd1 < '0' || fieldInd1 > '9')
-				&& (fieldInd1 < 'a' || fieldInd1 > 'z'))
-			{
-				fieldInd1 = '?';
-			}
-
-			char &fieldInd2 = (*fieldIt)->getInd2();
-			if ((fieldInd2 != ' ') && (fieldInd2 < '0' || fieldInd2 > '9')
-				&& (fieldInd2 < 'a' || fieldInd2 > 'z'))
-			{
-				fieldInd2 = '?';
-			}
-
-			/* Get list of specified subfields from field. */
-			MarcRecord::SubfieldRefList subfieldList = (*fieldIt)->getSubfields();
-			for (MarcRecord::SubfieldRefIt subfieldIt = subfieldList.begin();
-				subfieldIt != subfieldList.end();  subfieldIt++)
-			{
-				/* Replace incorrect subfield id to '?'. */
-				char &subfieldId = (*subfieldIt)->getId();
-				if ((subfieldId < '0' || subfieldId > '9')
-					&& (subfieldId < 'a' || subfieldId > 'z'))
-				{
-					subfieldId = '?';
-				}
-
-				/* Convert data of subfields. */
-				std::string &subfieldData = (*subfieldIt)->getData();
-				std::string subfieldDataRecoded;
-				if (!iconv(iconvDesc, subfieldData, subfieldDataRecoded)) {
-					return false;
-				}
-				subfieldData = subfieldDataRecoded;
-			}
-		}
-	}
-
-	return true;
-}
-
-/*
- * Convert encoding for std::string.
- */
-bool iconv(iconv_t iconvDesc, const std::string &src, std::string &dest)
-{
-	char buf[4096];
-	char *p = (char *) src.c_str();
-	size_t srcLen = src.size();
-
-	dest = "";
-	while (srcLen > 0) {
-		size_t destLen = sizeof(buf);
-		char *q = buf;
-		if (iconv(iconvDesc, &p, &srcLen, &q, &destLen) == (size_t) -1) {
-			if (errno != E2BIG) {
-				return false;
-			}
-		}
-
-		dest.append(buf, sizeof(buf) - destLen);
 	}
 
 	return true;
