@@ -7,7 +7,7 @@ PROGRAM=marc-convert
 CXX=g++
 CXXFLAGS=-O2 -W -Wall -Wextra -ansi -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long \
   -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/marcrecord/expat
-CXXFLAGS_MARCRECORD=
+CXXFLAGS_MARCRECORD=$(CXXFLAGS)
 CC=gcc
 CFLAGS_EXPAT=-O2 -Wall -ansi -pedantic -Wpointer-arith -Wmissing-prototypes -Wstrict-prototypes \
   -Wold-style-definition -Wwrite-strings -Wno-long-long -I$(SRC_DIR)/marcrecord/expat \
@@ -40,7 +40,7 @@ verify:
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 %.o: $(SRC_DIR)/marcrecord/%.cxx
-	$(CXX) $(CXXFLAGS) $(CXXFLAGS_MARCRECORD) -c $< -o $@
+	$(CXX) $(CXXFLAGS_MARCRECORD) -c $< -o $@
 
 %.o: $(SRC_DIR)/marcrecord/expat/%.c
 	$(CC) $(CFLAGS_EXPAT) -c $< -o $@
