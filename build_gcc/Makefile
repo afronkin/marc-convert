@@ -7,11 +7,11 @@ PROGRAM=marc-convert
 CXX=g++
 CXXFLAGS=-O2 -W -Wall -Wextra -ansi -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long \
   -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/marcrecord/expat
-CXXFLAGS_MARCRECORD=-DMARCRECORD_USE_UTF8
+CXXFLAGS_MARCRECORD=
 CC=gcc
 CFLAGS_EXPAT=-O2 -Wall -ansi -pedantic -Wpointer-arith -Wmissing-prototypes -Wstrict-prototypes \
   -Wold-style-definition -Wwrite-strings -Wno-long-long -I$(SRC_DIR)/marcrecord/expat \
-  -DHAVE_EXPAT_CONFIG_H -DMARCRECORD_USE_UTF8
+  -DHAVE_EXPAT_CONFIG_H
 LDFLAGS=
 LIBS=-lm -liconv
 
@@ -30,12 +30,10 @@ clean:
 	@echo $@ done.
 
 verify:
-#	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml -o test1.txt ../share/test/rusmarc.iso
-#	./$(PROGRAM) -vv -o test1.txt ../share/test/rusmarc.iso
-#	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,utf-8 -o test2.xml ../share/test/rusmarc.iso
-#	./$(PROGRAM) -vv -f marcxml,utf-8 -t text,cp1251 -o test3.txt test2.xml
-#	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,windows-1251 -o test4.xml ../share/test/rusmarc.iso
-#	./$(PROGRAM) -vv -f marcxml -t iso2709 -o test5.iso test4.xml
+	./$(PROGRAM) -vv -o test1.txt ../share/test/rusmarc.iso
+	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,utf-8 -o test2.xml ../share/test/rusmarc.iso
+	./$(PROGRAM) -vv -f marcxml,utf-8 -t text,cp1251 -o test3.txt test2.xml
+	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,windows-1251 -o test4.xml ../share/test/rusmarc.iso
 	@echo $@ done.
 
 %.o: $(SRC_DIR)/%.cxx

@@ -75,7 +75,7 @@ protected:
 	std::string m_inputEncoding;
 
 	/* Automatic error correction mode. */
-	bool m_autoCorrectMode;
+	bool m_autoCorrectionMode;
 
 	/* XML parser. */
 	XML_Parser m_xmlParser;
@@ -96,7 +96,7 @@ public:
 	std::string & getErrorMessage(void);
 
 	/* Set automatic error correction mode. */
-	void setAutoCorrectMode(bool autoCorrectMode = true);
+	void setAutoCorrectionMode(bool autoCorrectionMode = true);
 
 	/* Open input file and initialize parser. */
 	void open(FILE *inputFile, const char *inputEncoding = NULL);

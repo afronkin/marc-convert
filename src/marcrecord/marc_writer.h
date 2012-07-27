@@ -34,6 +34,7 @@
 #if !defined(MARC_WRITER_H)
 #define MARC_WRITER_H
 
+#include <iconv.h>
 #include <string>
 #include "marcrecord.h"
 
@@ -41,11 +42,27 @@
  * MARC (ISO 2709) records writer.
  */
 class MarcWriter {
+public:
+	/* Error codes. */
+	enum ErrorCode {
+		OK = 0,
+		ERROR_ICONV = -1,
+		ERROR_DATASIZE = -2,
+		ERROR_IO = -3
+	};
+
 protected:
+	/* Code of last error. */
+	ErrorCode m_errorCode;
+	/* Message of last error. */
+	std::string m_errorMessage;
+
 	/* Output ISO 2709 file. */
 	FILE *m_outputFile;
 	/* Encoding of output ISO 2709 file. */
 	std::string m_outputEncoding;
+	/* Iconv descriptor for output encoding. */
+	iconv_t m_iconvDesc;
 
 public:
 	/* Constructor. */
@@ -53,8 +70,13 @@ public:
 	/* Destructor. */
 	~MarcWriter();
 
+	/* Get last error code. */
+	ErrorCode getErrorCode(void);
+	/* Get last error message. */
+	std::string & getErrorMessage(void);
+
 	/* Open output file. */
-	void open(FILE *outputFile, const char *outputEncoding = NULL);
+	bool open(FILE *outputFile, const char *outputEncoding = NULL);
 	/* Close output file. */
 	void close(void);
 

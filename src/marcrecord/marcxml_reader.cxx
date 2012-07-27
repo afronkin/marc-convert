@@ -56,7 +56,7 @@ int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Enc
 MarcXmlReader::MarcXmlReader(FILE *inputFile, const char *inputEncoding)
 {
 	/* Clear member variables. */
-	m_autoCorrectMode = false;
+	m_autoCorrectionMode = false;
 
 	if (inputFile) {
 		/* Open input file and initialize parser. */
@@ -96,9 +96,9 @@ std::string & MarcXmlReader::getErrorMessage(void)
 /*
  * Set automatic error correction mode.
  */
-void MarcXmlReader::setAutoCorrectMode(bool autoCorrectMode)
+void MarcXmlReader::setAutoCorrectionMode(bool autoCorrectionMode)
 {
-	m_autoCorrectMode = autoCorrectMode;
+	m_autoCorrectionMode = autoCorrectionMode;
 }
 
 /*
@@ -140,15 +140,12 @@ void MarcXmlReader::close(void)
 		XML_ParserFree(m_xmlParser);
 	}
 
-	/* Clear error code and message. */
+	/* Clear member variables. */
 	m_errorCode = OK;
 	m_errorMessage = "";
-
-	/* Clear input stream parameters. */
 	m_inputFile = NULL;
 	m_inputEncoding = "";
-
-	/* Clear XML parser. */
+	m_autoCorrectionMode = false;
 	m_xmlParser = NULL;
 
 	/* Clear XML parser state. */
@@ -334,20 +331,16 @@ void XMLCALL marcXmlCharacterData(void *userData, const XML_Char *s, int len)
 int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Encoding *info)
 {
 	(void) (data);
-
-#if !defined(MARCRECORD_USE_UTF8)
-	for (int i = 0; i < 256; i++) {
-		info->map[i] = i;
-	}
-#else
 	iconv_t iconvDesc = (iconv_t) -1;
 	unsigned char iconvBuf[8];
 
+	/* Initialize iconv. */
 	iconvDesc = iconv_open("UTF-16BE", encoding);
 	if (iconvDesc == (iconv_t) -1) {
 		return XML_STATUS_ERROR;
 	}
 
+	/* Generate conversion table for unknown encoding. */
 	unsigned char i = 0;
 	do {
 		char *src = (char *) &i;
@@ -367,9 +360,10 @@ int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Enc
 		}
 	} while (i++ < 255);
 
+	/* Finalize iconv. */
 	iconv_close(iconvDesc);
-#endif /* MARCRECORD_USE_UTF8 */
 
+	/* Initialize rest of encoding information. */
 	info->data = NULL;
 	info->convert = NULL;
 	info->release = NULL;

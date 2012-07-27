@@ -103,11 +103,11 @@ bool convertFile(void)
 		switch (options.inputFormat) {
 		case FORMAT_ISO2709:
 			marcReader.open(inputFile, options.inputEncoding);
-			marcReader.setAutoCorrectMode(true);
+			marcReader.setAutoCorrectionMode(true);
 			break;
 		case FORMAT_MARCXML:
 			marcXmlReader.open(inputFile, options.inputEncoding);
-			marcXmlReader.setAutoCorrectMode(true);
+			marcXmlReader.setAutoCorrectionMode(true);
 			break;
 		default:
 			throw std::string("wrong input format specified");
@@ -336,12 +336,14 @@ void print_help(void)
 		"  -h --help        give this help\n",
 		"  -f --from        format and encoding of records in input file\n",
 		"                   formats: 'iso2709' (default), 'marcxml'\n",
+		"                   default encoding: UTF-8\n",
 		"  -n --numrecs     number of records to convert\n",
 		"  -o --output      name of output file ('-' for stdout)\n",
 		"  -p --permissive  permissive reading (skip minor errors)\n",
 		"  -s --skiprecs    number of records to skip\n",
 		"  -t --to          format and encoding of records in output file\n",
 		"                   formats: 'iso2709', 'marcxml', 'text' (default)\n",
+		"                   default encoding: UTF-8\n",
 		"  -v --verbose     increase verbosity level (can be specified multiple times)\n",
 		"  <input file>     name of input file ('-' for stdin)\n",
 		"\n",

@@ -45,6 +45,7 @@ std::string serialize_xml(std::string &s);
 int is_numeric(const char *s, size_t n);
 /* Convert encoding for std::string. */
 bool iconv(iconv_t iconv_desc, const std::string &src, std::string &dest);
+/* Convert encoding for std::string. */
 bool iconv(iconv_t iconv_desc, const char *src, size_t len, std::string &dest);
 
 #endif /* MARCRECORD_TOOLS_H */

@@ -31,8 +31,8 @@
  * OF SUCH DAMAGE.
  */
 
+#include <errno.h>
 #include <stdio.h>
-
 #include "marcrecord.h"
 #include "marcrecord_tools.h"
 #include "marcxml_writer.h"
@@ -42,6 +42,9 @@
  */
 MarcXmlWriter::MarcXmlWriter(FILE *outputFile, const char *outputEncoding)
 {
+	/* Clear member variables. */
+	m_iconvDesc = (iconv_t) -1;
+
 	if (outputFile) {
 		/* Open output file. */
 		open(outputFile, outputEncoding);
@@ -61,13 +64,54 @@ MarcXmlWriter::~MarcXmlWriter()
 }
 
 /*
+ * Get last error code.
+ */
+MarcXmlWriter::ErrorCode MarcXmlWriter::getErrorCode(void)
+{
+	return m_errorCode;
+}
+
+/*
+ * Get last error message.
+ */
+std::string & MarcXmlWriter::getErrorMessage(void)
+{
+	return m_errorMessage;
+}
+
+/*
  * Open output file.
  */
-void MarcXmlWriter::open(FILE *outputFile, const char *outputEncoding)
+bool MarcXmlWriter::open(FILE *outputFile, const char *outputEncoding)
 {
+	/* Clear error code and message. */
+	m_errorCode = OK;
+	m_errorMessage = "";
+
 	/* Initialize output stream parameters. */
 	m_outputFile = outputFile == NULL ? stdout : outputFile;
 	m_outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
+
+	/* Initialize encoding conversion. */
+	if (outputEncoding == NULL
+		|| strcmp(outputEncoding, "UTF-8") == 0 || strcmp(outputEncoding, "utf-8") == 0)
+	{
+		m_iconvDesc = (iconv_t) -1;
+	} else {
+		/* Create iconv descriptor for output encoding conversion from UTF-8. */
+		m_iconvDesc = iconv_open(outputEncoding, "UTF-8");
+		if (m_iconvDesc == (iconv_t) -1) {
+			m_errorCode = ERROR_ICONV;
+			if (errno == EINVAL) {
+				m_errorMessage = "encoding conversion is not supported";
+			} else {
+				m_errorMessage = "iconv initialization failed";
+			}
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /*
@@ -75,35 +119,90 @@ void MarcXmlWriter::open(FILE *outputFile, const char *outputEncoding)
  */
 void MarcXmlWriter::close(void)
 {
-	/* Clear output stream parameters. */
+	/* Finalize iconv. */
+	if (m_iconvDesc != (iconv_t) -1) {
+		iconv_close(m_iconvDesc);
+	}
+
+	/* Clear member variables. */
+	m_errorCode = OK;
+	m_errorMessage = "";
 	m_outputFile = NULL;
 	m_outputEncoding = "";
+	m_iconvDesc = (iconv_t) -1;
 }
 
 /*
  * Write header to MARCXML file.
  */
-void MarcXmlWriter::writeHeader(void)
+bool MarcXmlWriter::writeHeader(void)
 {
-	/* Write XML header. */
+	std::string header = "";
+
+	/* Create MARCXML header. */
 	if (m_outputEncoding != "") {
-		fprintf(m_outputFile, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
-			m_outputEncoding.c_str());
+		header += "<?xml version=\"1.0\" encoding=\"" + m_outputEncoding + "\"?>\n";
 	} else {
-		fputs("<?xml version=\"1.0\"?>\n", m_outputFile);
+		header = "<?xml version=\"1.0\"?>\n";
 	}
 
-	/* Write tag '<collection>'. */
-	fputs("<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n", m_outputFile);
+	header += "<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		/* Write MARCXML header. */
+		if (fwrite(header.c_str(), header.size(), 1, m_outputFile) != 1) {
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		/* Write MARCXML header with encoding conversion. */
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, header, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1, m_outputFile) != 1) {
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /*
  * Write footer to MARCXML file.
  */
-void MarcXmlWriter::writeFooter(void)
+bool MarcXmlWriter::writeFooter(void)
 {
-	/* Write tag '</collection>'. */
-	fputs("</collection>\n", m_outputFile);
+	std::string footer = "</collection>\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		/* Write MARCXML footer. */
+		if (fwrite(footer.c_str(), footer.size(), 1, m_outputFile) != 1) {
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		/* Write MARCXML footer with encoding conversion. */
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, footer, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1, m_outputFile) != 1) {
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /*
@@ -111,12 +210,14 @@ void MarcXmlWriter::writeFooter(void)
  */
 bool MarcXmlWriter::write(MarcRecord &record)
 {
-	/* Write tag '<record>'. */
-	fputs("  <record>\n", m_outputFile);
+	std::string recordBuf = "";
 
-	/* Write record leader. */
-	fprintf(m_outputFile, "    <leader>     %.*s</leader>\n",
-		(int) sizeof(struct MarcRecord::Leader) - 5, (char *) &record.m_leader + 5);
+	/* Append tag '<record>'. */
+	recordBuf += "  <record>\n";
+
+	/* Append record leader. */
+	recordBuf += "    <leader>     " + std::string((char *) &record.m_leader + 5,
+		(size_t) sizeof(struct MarcRecord::Leader) - 5) + "</leader>\n";
 
 	/* Iterate all fields. */
 	for (MarcRecord::FieldIt fieldIt = record.m_fieldList.begin();
@@ -125,34 +226,55 @@ bool MarcXmlWriter::write(MarcRecord &record)
 		std::string xmlData;
 
 		if (fieldIt->m_tag < "010") {
-			/* Write control field. */
+			/* Append control field. */
 			xmlData = serialize_xml(fieldIt->m_data);
-			fprintf(m_outputFile, "    <controlfield tag=\"%s\">%.*s</controlfield>\n",
-				fieldIt->m_tag.c_str(), (int) xmlData.size(), xmlData.c_str());
+			recordBuf += "    <controlfield tag=\"" + fieldIt->m_tag + "\">"
+				+ xmlData + "</controlfield>\n";
 		} else {
-			/* Write tag '<datafield>'. */
-			fprintf(m_outputFile,
-				"    <datafield tag=\"%s\" ind1=\"%c\" ind2=\"%c\">\n",
-				fieldIt->m_tag.c_str(), fieldIt->m_ind1, fieldIt->m_ind2);
+			/* Append tag '<datafield>'. */
+			recordBuf += "    <datafield tag=\"" + fieldIt->m_tag
+				+ "\" ind1=\"" + fieldIt->m_ind1
+				+ "\" ind2=\"" + fieldIt->m_ind2 + "\">\n";
 
 			/* Iterate all subfields. */
 			for (MarcRecord::SubfieldIt subfieldIt = fieldIt->m_subfieldList.begin();
 				subfieldIt != fieldIt->m_subfieldList.end(); subfieldIt++)
 			{
-				/* Write subfield. */
+				/* Append subfield. */
 				xmlData = serialize_xml(subfieldIt->m_data);
-				fprintf(m_outputFile,
-					"      <subfield code=\"%c\">%.*s</subfield>\n",
-					subfieldIt->m_id, (int) xmlData.size(), xmlData.c_str());
+				recordBuf = recordBuf + "      <subfield code=\""
+					+ subfieldIt->m_id + "\">" + xmlData + "</subfield>\n";
 			}
 
-			/* Write tag '</datafield>'. */
-			fputs("    </datafield>\n", m_outputFile);
+			/* Append tag '</datafield>'. */
+			recordBuf += "    </datafield>\n";
 		}
 	}
 
-	/* Write tag '<record>'. */
-	fputs("  </record>\n", m_outputFile);
+	/* Append tag '<record>'. */
+	recordBuf += "  </record>\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		/* Write MARCXML record. */
+		if (fwrite(recordBuf.c_str(), recordBuf.size(), 1, m_outputFile) != 1) {
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		/* Write MARCXML record with encoding conversion. */
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, recordBuf, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1, m_outputFile) != 1) {
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
 
 	return true;
 }

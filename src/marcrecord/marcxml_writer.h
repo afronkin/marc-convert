@@ -34,6 +34,7 @@
 #if !defined(MARCXML_WRITER_H)
 #define MARCXML_WRITER_H
 
+#include <iconv.h>
 #include <string>
 #include "marcrecord.h"
 
@@ -41,11 +42,26 @@
  * MARCXML records writer.
  */
 class MarcXmlWriter {
+public:
+	/* Error codes. */
+	enum ErrorCode {
+		OK = 0,
+		ERROR_ICONV = -1,
+		ERROR_IO = -2
+	};
+
 protected:
+	/* Code of last error. */
+	ErrorCode m_errorCode;
+	/* Message of last error. */
+	std::string m_errorMessage;
+
 	/* Output MARCXML file. */
 	FILE *m_outputFile;
 	/* Encoding of output MARCXML file. */
 	std::string m_outputEncoding;
+	/* Iconv descriptor for output encoding. */
+	iconv_t m_iconvDesc;
 
 public:
 	/* Constructor. */
@@ -53,15 +69,20 @@ public:
 	/* Destructor. */
 	~MarcXmlWriter();
 
+	/* Get last error code. */
+	ErrorCode getErrorCode(void);
+	/* Get last error message. */
+	std::string & getErrorMessage(void);
+
 	/* Open output file. */
-	void open(FILE *outputFile, const char *outputEncoding = NULL);
+	bool open(FILE *outputFile, const char *outputEncoding = NULL);
 	/* Close output file. */
 	void close(void);
 
 	/* Write header to MARCXML file. */
-	void writeHeader(void);
+	bool writeHeader(void);
 	/* Write footer to MARCXML file. */
-	void writeFooter(void);
+	bool writeFooter(void);
 	/* Write record to MARCXML file. */
 	bool write(MarcRecord &record);
 };
