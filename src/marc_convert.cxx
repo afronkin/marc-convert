@@ -34,11 +34,11 @@
 #include <errno.h>
 #include <math.h>
 /*
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 */
+#include <stdio.h>
+#include <string.h>
 #include "marcrecord/marcrecord.h"
 #include "marcrecord/marc_reader.h"
 #include "marcrecord/marc_writer.h"
@@ -212,7 +212,11 @@ bool convertFile(void)
 					textRecord = recordHeader + record.toString() + "\n";
 
 					/* Write record. */
-					fwrite(textRecord.c_str(), textRecord.size(), 1, outputFile);
+					if (fwrite(textRecord.c_str(), textRecord.size(), 1,
+						outputFile) != 1)
+					{
+						throw std::string("i/o error");
+					}
 					break;
 				default:
 					throw std::string("unknown output format");

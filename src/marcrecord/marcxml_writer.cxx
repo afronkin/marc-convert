@@ -33,6 +33,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include "marcrecord.h"
 #include "marcrecord_tools.h"
 #include "marcxml_writer.h"
