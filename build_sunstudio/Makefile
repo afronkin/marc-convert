@@ -6,9 +6,9 @@ PROGRAM=marc-convert
 
 CXX=CC
 CXXFLAGS=-O2 -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/marcrecord/expat
-CXXFLAGS_EXTRA=-D_XPG6
+CXXFLAGS_MARCRECORD=-D_XPG6
 CC=cc
-CFLAGS=-O2 -I$(SRC_DIR)/marcrecord/expat -DHAVE_EXPAT_CONFIG_H
+CFLAGS_EXPAT=-O2 -I$(SRC_DIR)/marcrecord/expat -DHAVE_EXPAT_CONFIG_H
 LDFLAGS=
 LIBS=-lm
 
@@ -33,10 +33,10 @@ verify:
 	@echo $@ done.
 
 %.o: $(SRC_DIR)/%.cxx
-	$(CXX) $(CXXFLAGS) $(CXXFLAGS_EXTRA) -c $< -o $@
-
-%.o: $(SRC_DIR)/marcrecord/%.cxx
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+%.o: $(SRC_DIR)/marcrecord/%.cxx
+	$(CXX) $(CXXFLAGS_MARCRECORD) -c $< -o $@
+
 %.o: $(SRC_DIR)/marcrecord/expat/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS_EXPAT) -c $< -o $@
