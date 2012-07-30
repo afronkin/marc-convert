@@ -33,15 +33,12 @@
 
 #include <errno.h>
 #include <math.h>
-/*
-#include <stdlib.h>
-#include <time.h>
-*/
 #include <stdio.h>
 #include <string.h>
 #include "marcrecord/marcrecord.h"
 #include "marcrecord/marc_reader.h"
 #include "marcrecord/marc_writer.h"
+#include "marcrecord/marctext_writer.h"
 #include "marcrecord/marcxml_reader.h"
 #include "marcrecord/marcxml_writer.h"
 
@@ -113,8 +110,9 @@ bool convertFile(void)
 			throw std::string("wrong input format specified");
 		}
 
-		/* Open output file in MarcWriter or MarcXmlWriter. */
+		/* Open output file in MarcWriter, MarcTextWriter or MarcXmlWriter. */
 		MarcWriter marcWriter;
+		MarcTextWriter marcTextWriter;
 		MarcXmlWriter marcXmlWriter;
 
 		switch (options.outputFormat) {
@@ -126,6 +124,7 @@ bool convertFile(void)
 			marcXmlWriter.writeHeader();
 			break;
 		case FORMAT_TEXT:
+			marcTextWriter.open(outputFile, options.outputEncoding);
 			break;
 		default:
 			throw std::string("wrong input format specified");
@@ -200,7 +199,6 @@ bool convertFile(void)
 					marcXmlWriter.write(record);
 					break;
 				case FORMAT_TEXT:
-					/* Write record header. */
 					char recordHeader[30];
 					if (numConvertedRecs > 1) {
 						sprintf(recordHeader, "\nRecord %d\n", recNo);
@@ -208,15 +206,7 @@ bool convertFile(void)
 						sprintf(recordHeader, "Record %d\n", recNo);
 					}
 
-					/* Create text record. */
-					textRecord = recordHeader + record.toString() + "\n";
-
-					/* Write record. */
-					if (fwrite(textRecord.c_str(), textRecord.size(), 1,
-						outputFile) != 1)
-					{
-						throw std::string("i/o error");
-					}
+					marcTextWriter.write(record, recordHeader, "\n");
 					break;
 				default:
 					throw std::string("unknown output format");
