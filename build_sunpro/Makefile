@@ -1,14 +1,14 @@
 SRC_DIR=../src
 OBJS=marc_convert.o marc_reader.o marc_writer.o marcrecord.o marcrecord_field.o \
-  marcrecord_subfield.o marcrecord_tools.o marcxml_reader.o marcxml_writer.o  \
+  marcrecord_subfield.o marcrecord_tools.o marctext_writer.o marcxml_reader.o marcxml_writer.o  \
   xmlparse.o xmlrole.o xmltok.o
 PROGRAM=marc-convert
 
 CXX=CC
-CXXFLAGS=-O2 -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/marcrecord/expat
-CXXFLAGS_MARCRECORD=-D_XPG6
+CXXFLAGS=-O2 -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/expat
+CXXFLAGS_MARCRECORD=$(CXXFLAGS) -D_XPG6
 CC=cc
-CFLAGS_EXPAT=-O2 -I$(SRC_DIR)/marcrecord/expat -DHAVE_EXPAT_CONFIG_H
+CFLAGS_EXPAT=-O2 -I$(SRC_DIR)/expat -DHAVE_EXPAT_CONFIG_H
 LDFLAGS=
 LIBS=-lm
 

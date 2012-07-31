@@ -1,17 +1,16 @@
 SRC_DIR=../src
 OBJS=marc_convert.o marc_reader.o marc_writer.o marcrecord.o marcrecord_field.o \
-  marcrecord_subfield.o marcrecord_tools.o marcxml_reader.o marcxml_writer.o  \
+  marcrecord_subfield.o marcrecord_tools.o marctext_writer.o marcxml_reader.o marcxml_writer.o \
   xmlparse.o xmlrole.o xmltok.o
 PROGRAM=marc-convert
 
 CXX=g++
 CXXFLAGS=-O2 -W -Wall -Wextra -ansi -pedantic -Wpointer-arith -Wwrite-strings -Wno-long-long \
-  -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/marcrecord/expat
+  -I$(SRC_DIR) -I$(SRC_DIR)/marcrecord -I$(SRC_DIR)/expat
 CXXFLAGS_MARCRECORD=$(CXXFLAGS)
 CC=gcc
 CFLAGS_EXPAT=-O2 -Wall -ansi -pedantic -Wpointer-arith -Wmissing-prototypes -Wstrict-prototypes \
-  -Wold-style-definition -Wwrite-strings -Wno-long-long -I$(SRC_DIR)/marcrecord/expat \
-  -DHAVE_EXPAT_CONFIG_H
+  -Wold-style-definition -Wwrite-strings -Wno-long-long -I$(SRC_DIR)/expat -DHAVE_EXPAT_CONFIG_H
 LDFLAGS=
 LIBS=-lm -liconv
 
@@ -42,5 +41,5 @@ verify:
 %.o: $(SRC_DIR)/marcrecord/%.cxx
 	$(CXX) $(CXXFLAGS_MARCRECORD) -c $< -o $@
 
-%.o: $(SRC_DIR)/marcrecord/expat/%.c
+%.o: $(SRC_DIR)/expat/%.c
 	$(CC) $(CFLAGS_EXPAT) -c $< -o $@

@@ -320,7 +320,7 @@ void print_help(void)
 	const char *help[] = {
 		"marc-convert 1.1 (25 Jul 2012)\n",
 		"Convert MARC records between different formats and encodings.\n",
-		"Copyright (C) 2012  Alexander Fronkin\n",
+		"Copyright (c) 2012, Alexander Fronkin\n",
 		"\n",
 		"usage: marc-convert [-hpv]\n",
 		"                    [-f [<format>][,<encoding>]] [-t [<format>][,<encoding>]]\n",
