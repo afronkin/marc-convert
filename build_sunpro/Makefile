@@ -38,5 +38,5 @@ verify:
 %.o: $(SRC_DIR)/marcrecord/%.cxx
 	$(CXX) $(CXXFLAGS_MARCRECORD) -c $< -o $@
 
-%.o: $(SRC_DIR)/marcrecord/expat/%.c
+%.o: $(SRC_DIR)/expat/%.c
 	$(CC) $(CFLAGS_EXPAT) -c $< -o $@
