@@ -71,6 +71,7 @@ static struct Options options = {
 bool convertFile(void)
 {
 	FILE *inputFile = NULL, *outputFile = NULL;
+	int recNo = 0, numBadRecs = 0, numConvertedRecs = 0;
 
 	try {
 		/* Open input file. */
@@ -136,7 +137,6 @@ bool convertFile(void)
 		prevTime = startTime;
 
 		/* Iterate records in input file. */
-		int recNo, numBadRecs = 0, numConvertedRecs = 0;
 		for (recNo = 1; options.numRecs == 0 || numConvertedRecs < options.numRecs;
 			recNo++)
 		{
@@ -260,9 +260,9 @@ bool convertFile(void)
 	} catch (std::string errorMessage) {
 		/* Print error message. */
 		if (options.verboseLevel > 1) {
-			fputc('\n', stderr);
+			fputc('\r', stderr);
 		}
-		fprintf(stderr, "Error: %s.\n", errorMessage.c_str());
+		fprintf(stderr, "Error in record %d: %s.\n", recNo, errorMessage.c_str());
 
 		/* Close files. */
 		if (inputFile && inputFile != stdin) {
