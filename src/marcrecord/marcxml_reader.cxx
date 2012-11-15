@@ -343,7 +343,11 @@ int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Enc
 	/* Generate conversion table for unknown encoding. */
 	unsigned char i = 0;
 	do {
+#if defined(WIN32)
+		const char *src = (const char *) &i;
+#else
 		char *src = (char *) &i;
+#endif /* WIN32 */
 		char *dest = (char *) iconvBuf;
 		size_t srcLen = 1;
 		size_t destLen = sizeof(iconvBuf);

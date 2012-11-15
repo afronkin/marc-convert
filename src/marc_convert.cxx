@@ -35,6 +35,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "marcrecord/marcrecord.h"
 #include "marcrecord/marc_reader.h"
 #include "marcrecord/marc_writer.h"
