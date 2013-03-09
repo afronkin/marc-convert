@@ -26,11 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <errno.h>
+extern "C" {
+#include <getopt.h>
+}
 #include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
 #include "marcrecord/marcrecord.h"
 #include "marcrecord/marc_reader.h"
 #include "marcrecord/marc_writer.h"
@@ -47,7 +50,6 @@ enum RecordFormat { FORMAT_NULL, FORMAT_ISO2709, FORMAT_MARCXML, FORMAT_TEXT };
 struct Options {
 	int verboseLevel;
 	bool permissiveRead;
-	const char *encoding;
 	int skipRecs;
 	int numRecs;
 	const char *inputFileName;
@@ -69,7 +71,7 @@ typedef Counters Counters;
 
 // Application options.
 static Options options = {
-	0, false, NULL, 0, 0, NULL, NULL,
+	0, false, 0, 0, NULL, NULL,
 	FORMAT_ISO2709, FORMAT_TEXT, NULL, NULL };
 
 // Records readers.
@@ -313,51 +315,33 @@ convertFile(void)
 }
 
 /*
- * Parse format string.
+ * Convert record format name to code.
  */
-static bool
-parseFormatString(const char *formatString, RecordFormat *format,
-	const char **encoding)
+static RecordFormat
+parseRecordFormat(const char *formatName)
 {
-	// Check presence of format string.
-	if (!formatString || strlen(formatString) == 0) {
-		return false;
+	// Check presence of format name.
+	if (!formatName || strlen(formatName) == 0) {
+		return FORMAT_NULL;
 	}
 
 	// Convert format name to format code.
-	const char *arg = formatString;
-	if (strlen(arg) == 0 || arg[0] == ',') {
-		*format = FORMAT_NULL;
-	} else if (strcmp(arg, "iso2709") == 0
-		|| strncmp(arg, "iso2709,", 8) == 0)
-	{
-		*format = FORMAT_ISO2709;
-	} else if (strcmp(arg, "marcxml") == 0
-		|| strncmp(arg, "marcxml,", 8) == 0)
-	{
-		*format = FORMAT_MARCXML;
-	} else if (strcmp(arg, "text") == 0
-		|| strncmp(arg, "text,", 5) == 0)
-	{
-		*format = FORMAT_TEXT;
-	} else {
-		return false;
+	if (strcmp(formatName, "iso2709") == 0) {
+		return FORMAT_ISO2709;
+	} else if (strcmp(formatName, "marcxml") == 0) {
+		return FORMAT_MARCXML;
+	} else if (strcmp(formatName, "text") == 0) {
+		return FORMAT_TEXT;
 	}
 
-	// Get encoding.
-	arg = strchr(formatString, ',');
-	if (arg != NULL) {
-		*encoding = arg + 1;
-	}
-	
-	return true;
+	return FORMAT_NULL;
 }
 
 /*
- * Print help information.
+ * Display usage information.
  */
 static void
-print_help(void)
+displayUsage(void)
 {
 	int i;
 	const char *help[] = {
@@ -366,25 +350,25 @@ print_help(void)
 		"Copyright (c) 2013, Alexander Fronkin\n",
 		"\n",
 		"usage: marc-convert [-hpv]\n",
-		"  [-f [<format>][,<encoding>]] [-t [<format>][,<encoding>]]\n",
-		"  [-s <number of records>] [-n <number of records>]\n",
-		"  [-o <output file>] [<input file>]\n",
+		"  [-f srcfmt] [-t destfmt] [-e srcenc] [-r destenc]\n",
+		"  [-s numrecs] [-n numrecs] [-o outfile] [infile]\n",
 		"\n",
 		"  -h --help        give this help\n",
-		"  -f --from        format and encoding of input file\n",
+		"  -e --encoding    encoding of input file\n",
+		"                   default encoding: utf-8\n",
+		"  -f --from        format of input file\n",
 		"                   formats: iso2709, marcxml\n",
 		"                   default format: iso2709\n",
-		"                   default encoding: utf-8\n",
 		"  -n --numrecs     number of records to convert\n",
 		"  -o --output      name of output file ('-' for stdout)\n",
 		"  -p --permissive  permissive reading (skip minor errors)\n",
+		"  -r --recode      encoding of output file\n",
 		"  -s --skiprecs    number of records to skip\n",
-		"  -t --to          format and encoding of output file\n",
+		"  -t --to          format of output file\n",
 		"                   formats: iso2709, marcxml, text\n",
 		"                   default format: text\n",
-		"                   default encoding: utf-8\n",
 		"  -v --verbose     increase verbosity level (repeatable)\n",
-		"  <input file>     name of input file ('-' for stdin)\n",
+		"  infile           name of input file ('-' for stdin)\n",
 		"\n",
 		NULL};
 
@@ -398,148 +382,98 @@ print_help(void)
 }
 
 /*
+ * Parse command line arguments.
+ */
+static int
+parseCommandLine(int argc, char **argv)
+{
+	static const char *short_options = "hf:e:n:o:pr:s:t:v";
+	static struct option long_options[] = {
+		{ "help", no_argument, 0, 'h' },
+		{ "encoding", required_argument, 0, 'e' },
+		{ "from", required_argument, 0, 'f' },
+		{ "numrecs", required_argument, 0, 'n' },
+		{ "output", required_argument, 0, 'o' },
+		{ "permissive", no_argument, 0, 'p' },
+		{ "recode", required_argument, 0, 'r' },
+		{ "skiprecs", required_argument, 0, 's' },
+		{ "to", required_argument, 0, 't' },
+		{ "verbose", no_argument, 0, 'v' },
+		{ 0, 0, 0, 0 }
+	};
+	int option;
+
+	// Print help when no arguments specified.
+	if (argc <= 1) {
+		displayUsage();
+		return 2;
+	}
+
+	// Parse command line arguments with getopt_long().
+	while ((option = getopt_long(argc, argv, short_options,
+		long_options, NULL)) != -1)
+	{
+		switch (option) {
+		case 'h':
+			displayUsage();
+			return 2;
+		case 'e':
+			options.inputEncoding = optarg;
+			break;
+		case 'f':
+			options.inputFormat = parseRecordFormat(optarg);
+			break;
+		case 'n':
+			options.numRecs = atol(optarg);
+			break;
+		case 'o':
+			options.outputFileName = optarg;
+			break;
+		case 'p':
+			options.permissiveRead = true;
+			break;
+		case 'r':
+			options.outputEncoding = optarg;
+			break;
+		case 's':
+			options.skipRecs = atol(optarg);
+			break;
+		case 't':
+			options.outputFormat = parseRecordFormat(optarg);
+			break;
+		case 'v':
+			options.verboseLevel++;
+			break;
+		default:
+			return 2;
+		}
+	}
+
+	if (optind < argc) {
+		options.inputFileName = argv[optind++];
+	}
+
+	// If only input encoding specified then use it as output encoding too.
+	if (options.inputEncoding != NULL && options.outputEncoding == NULL) {
+		options.outputEncoding = options.inputEncoding;
+	}
+
+	// Command line parsed successfully.
+	return 0;
+}
+
+/*
  * Main function.
  */
 int
 main(int argc, char **argv)
 {
-	const char *fromInfo = NULL, *toInfo = NULL;
+	int result_code;
 
-	// Parse arguments.
-	for (int argNo = 1; argNo < argc; argNo++) {
-		if (argv[argNo][0] == '-' && argv[argNo][1] != '-') {
-			if (strchr(argv[argNo], 'h') != NULL) {
-				print_help();
-				return 1;
-			}
-
-			for (char *p = argv[argNo] + 1; *p; p++) {
-				switch (*p) {
-				case 'f':
-					if (argNo + 1 >= argc) {
-						fprintf(stderr, "Error: records format "
-							"must be specified.\n");
-						return 1;
-					}
-					fromInfo = argv[++argNo];
-					p = (char *) "-";
-					break;
-				case 'n':
-					if (argNo + 1 >= argc) {
-						fprintf(stderr, "Error: number of records to "
-							"convert must be specified.\n");
-						return 1;
-					}
-					options.numRecs = atol(argv[++argNo]);
-					p = (char *) "-";
-					break;
-				case 'o':
-					if (argNo + 1 >= argc) {
-						fprintf(stderr,
-							"Error: output file must be specified.\n");
-						return 1;
-					}
-					options.outputFileName = argv[++argNo];
-					p = (char *) "-";
-					break;
-				case 'p':
-					options.permissiveRead = true;
-					break;
-				case 's':
-					if (argNo + 1 >= argc) {
-						fprintf(stderr, "Error: number of records to skip "
-							"must be specified.\n");
-						return 1;
-					}
-					options.skipRecs = atol(argv[++argNo]);
-					p = (char *) "-";
-					break;
-				case 't':
-					if (argNo + 1 >= argc) {
-						fprintf(stderr, "Error: records format "
-							"must be specified.\n");
-						return 1;
-					}
-					toInfo = argv[++argNo];
-					p = (char *) "-";
-					break;
-				case 'v':
-					options.verboseLevel++;
-					break;
-				default:
-					fprintf(stderr, "Error: wrong argument \"-%c\".\n\n", *p);
-					return 1;
-				}
-			}
-		} else if (strcmp(argv[argNo], "--help") == 0) {
-			print_help();
-			return 1;
-		} else if (strncmp(argv[argNo], "--from", 6) == 0) {
-			if (strchr(argv[argNo], '=') == NULL) {
-				fprintf(stderr, "Error: records format must be specified.\n");
-				return 1;
-			}
-			fromInfo = strchr(argv[argNo], '=') + 1;
-		} else if (strncmp(argv[argNo], "--numrecs", 9) == 0) {
-			if (strchr(argv[argNo], '=') == NULL) {
-				fprintf(stderr,
-					"Error: number of records to convert must be specified.\n");
-				return 1;
-			}
-			options.numRecs = atol(strchr(argv[argNo], '=') + 1);
-		} else if (strncmp(argv[argNo], "--output", 8) == 0) {
-			if (strchr(argv[argNo], '=') == NULL) {
-				fprintf(stderr, "Error: output file must be specified.\n");
-				return 1;
-			}
-			options.outputFileName = strchr(argv[argNo], '=') + 1;
-		} else if (strcmp(argv[argNo], "--permissive") == 0) {
-			options.permissiveRead = true;
-		} else if (strncmp(argv[argNo], "--skiprecs", 10) == 0) {
-			if (strchr(argv[argNo], '=') == NULL) {
-				fprintf(stderr,
-					"Error: number of records to skip must be specified.\n");
-				return 1;
-			}
-			options.skipRecs = atol(strchr(argv[argNo], '=') + 1);
-		} else if (strncmp(argv[argNo], "--to", 4) == 0) {
-			if (strchr(argv[argNo], '=') == NULL) {
-				fprintf(stderr, "Error: records format must be specified.\n");
-				return 1;
-			}
-			toInfo = strchr(argv[argNo], '=') + 1;
-		} else if (strcmp(argv[argNo], "--verbose") == 0) {
-			options.verboseLevel++;
-		} else if (options.inputFileName == NULL) {
-			options.inputFileName = argv[argNo];
-		} else {
-			fprintf(stderr, "Error: wrong argument \"%s\".\n\n", argv[argNo]);
-			return 1;
-		}
-	}
-
-	// Parse input format and encoding.
-	if (fromInfo && !parseFormatString(fromInfo, &options.inputFormat,
-		&options.inputEncoding))
-	{
-		fprintf(stderr, "Error: wrong format string '%s' specified.\n",
-			fromInfo);
-		return 1;
-	}
-	if (options.inputFormat == FORMAT_NULL) {
-		options.inputFormat = FORMAT_ISO2709;
-	}
-	
-	// Parse output format and encoding.
-	if (toInfo && !parseFormatString(toInfo, &options.outputFormat,
-		&options.outputEncoding))
-	{
-		fprintf(stderr, "Error: wrong format string '%s' specified.\n",
-			toInfo);
-		return 1;
-	}
-	if (options.outputFormat == FORMAT_NULL) {
-		options.outputFormat = FORMAT_TEXT;
+	// Parse command line arguments.
+	result_code = parseCommandLine(argc, argv);
+	if (result_code != 0) {
+		return result_code;
 	}
 
 	// Convert file.

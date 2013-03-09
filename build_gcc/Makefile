@@ -30,9 +30,9 @@ clean:
 
 verify:
 	./$(PROGRAM) -vv -o test1.txt ../share/test/rusmarc.iso
-	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,utf-8 -o test2.xml ../share/test/rusmarc.iso
-	./$(PROGRAM) -vv -f marcxml,utf-8 -t text,cp1251 -o test3.txt test2.xml
-	./$(PROGRAM) -vv -f iso2709,cp1251 -t marcxml,windows-1251 -o test4.xml ../share/test/rusmarc.iso
+	./$(PROGRAM) -vv -f iso2709 -t marcxml -e cp1251 -r utf-8 -o test2.xml ../share/test/rusmarc.iso
+	./$(PROGRAM) -vv -f marcxml -t text -r cp1251 -o test3.txt test2.xml
+	./$(PROGRAM) -vv -f iso2709 -t marcxml -e windows-1251 -o test4.xml ../share/test/rusmarc.iso
 	@echo $@ done.
 
 %.o: $(SRC_DIR)/%.cxx
