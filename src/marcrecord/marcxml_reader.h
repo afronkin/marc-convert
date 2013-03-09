@@ -29,9 +29,9 @@
 #ifndef MARCRECORD_SRC_MARCXML_READER_H
 #define MARCRECORD_SRC_MARCXML_READER_H
 
+#include <expat.h>
 #include <string>
 #include "marcrecord.h"
-#include "expat/expat.h"
 
 namespace marcrecord {
 
