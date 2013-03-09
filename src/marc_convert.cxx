@@ -403,12 +403,6 @@ parseCommandLine(int argc, char **argv)
 	};
 	int option;
 
-	// Print help when no arguments specified.
-	if (argc <= 1) {
-		displayUsage();
-		return 2;
-	}
-
 	// Parse command line arguments with getopt_long().
 	while ((option = getopt_long(argc, argv, short_options,
 		long_options, NULL)) != -1)
