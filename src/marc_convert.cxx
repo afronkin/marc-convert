@@ -59,22 +59,122 @@ struct Options {
 };
 typedef struct Options Options;
 
+// Records counters.
+struct Counters {
+	int recNo;
+	int numBadRecs;
+	int numConvertedRecs;
+};
+typedef Counters Counters;
+
 // Application options.
 static Options options = {
 	0, false, NULL, 0, 0, NULL, NULL,
 	FORMAT_ISO2709, FORMAT_TEXT, NULL, NULL };
 
+// Records readers.
+MarcReader marcReader;
+MarcXmlReader marcXmlReader;
+
+// Records writers.
+MarcWriter marcWriter;
+MarcTextWriter marcTextWriter;
+MarcXmlWriter marcXmlWriter;
+
+/*
+ * Convert record (read it from input file and write to output file).
+ * Side effect: updates counters.
+ */
+static bool
+convertRecord(Counters &counters)
+{
+	// Read record from input file.
+	MarcRecord record;
+	bool readStatus;
+
+	switch (options.inputFormat) {
+	case FORMAT_ISO2709:
+		readStatus = marcReader.next(record);
+		if (readStatus) {
+			break;
+		}
+
+		switch (marcReader.getErrorCode()) {
+		case MarcReader::END_OF_FILE:
+			return false;
+		case MarcReader::ERROR_INVALID_RECORD:
+			if (options.permissiveRead) {
+				counters.numBadRecs++;
+				break;
+			}
+			throw marcReader.getErrorMessage();
+		default:
+			throw marcReader.getErrorMessage();
+		}
+		break;
+	case FORMAT_MARCXML:
+		readStatus = marcXmlReader.next(record);
+		if (readStatus) {
+			break;
+		}
+
+		switch (marcXmlReader.getErrorCode()) {
+		case MarcXmlReader::END_OF_FILE:
+			return false;
+		default:
+			throw marcXmlReader.getErrorMessage();
+		}
+		break;
+	default:
+		throw std::string("unknown input format");
+	}
+
+	// Write record to output file.
+	if (readStatus && counters.recNo > options.skipRecs) {
+		counters.numConvertedRecs++;
+		std::string textRecord, textRecordRecoded;
+
+		switch (options.outputFormat) {
+		case FORMAT_ISO2709:
+			marcWriter.write(record);
+			break;
+		case FORMAT_MARCXML:
+			marcXmlWriter.write(record);
+			break;
+		case FORMAT_TEXT:
+			char recordHeader[30];
+			if (counters.numConvertedRecs > 1) {
+				sprintf(recordHeader, "\nRecord %d\n",
+					counters.recNo);
+			} else {
+				sprintf(recordHeader, "Record %d\n",
+					counters.recNo);
+			}
+
+			marcTextWriter.write(record, recordHeader, "\n");
+			break;
+		default:
+			throw std::string("unknown output format");
+		}
+	}
+
+	return true;
+}
+
 /*
  * Convert records from MARC file.
  */
-bool convertFile(void)
+bool
+convertFile(void)
 {
 	FILE *inputFile = NULL, *outputFile = NULL;
-	int recNo = 0, numBadRecs = 0, numConvertedRecs = 0;
+	Counters counters = { 0, 0, 0 };
 
 	try {
 		// Open input file.
-		if (options.inputFileName == NULL || strcmp(options.inputFileName, "-") == 0) {
+		if (options.inputFileName == NULL
+			|| strcmp(options.inputFileName, "-") == 0)
+		{
 			inputFile = stdin;
 		} else {
 			inputFile = fopen(options.inputFileName, "rb");
@@ -84,7 +184,9 @@ bool convertFile(void)
 		}
 
 		// Open output file.
-		if (options.outputFileName == NULL || strcmp(options.outputFileName, "-") == 0) {
+		if (options.outputFileName == NULL
+			|| strcmp(options.outputFileName, "-") == 0)
+		{
 			outputFile = stdout;
 		} else {
 			outputFile = fopen(options.outputFileName, "wb");
@@ -94,9 +196,6 @@ bool convertFile(void)
 		}
 
 		// Open input file in MarcReader or MarcXmlReader.
-		MarcReader marcReader;
-		MarcXmlReader marcXmlReader;
-
 		switch (options.inputFormat) {
 		case FORMAT_ISO2709:
 			marcReader.open(inputFile, options.inputEncoding);
@@ -110,11 +209,7 @@ bool convertFile(void)
 			throw std::string("wrong input format specified");
 		}
 
-		// Open output file in MarcWriter, MarcTextWriter or MarcXmlWriter.
-		MarcWriter marcWriter;
-		MarcTextWriter marcTextWriter;
-		MarcXmlWriter marcXmlWriter;
-
+		// Open output file in *Writer.
 		switch (options.outputFormat) {
 		case FORMAT_ISO2709:
 			marcWriter.open(outputFile, options.outputEncoding);
@@ -124,7 +219,8 @@ bool convertFile(void)
 			marcXmlWriter.writeHeader();
 			break;
 		case FORMAT_TEXT:
-			marcTextWriter.open(outputFile, options.outputEncoding);
+			marcTextWriter.open(outputFile,
+				options.outputEncoding);
 			break;
 		default:
 			throw std::string("wrong input format specified");
@@ -135,88 +231,21 @@ bool convertFile(void)
 		time(&startTime);
 		prevTime = startTime;
 
-		// Iterate records in input file.
-		for (recNo = 1; options.numRecs == 0 || numConvertedRecs < options.numRecs;
-			recNo++)
+		// Convert records from input file to output file.
+		for (counters.recNo = 1; options.numRecs == 0
+			|| counters.numConvertedRecs < options.numRecs;
+			counters.recNo++)
 		{
-			// Read record from input file.
-			MarcRecord record;
-			bool readStatus;
-			bool exitFlag = false;
-
-			switch (options.inputFormat) {
-			case FORMAT_ISO2709:
-				readStatus = marcReader.next(record);
-				if (!readStatus) {
-					switch (marcReader.getErrorCode()) {
-					case MarcReader::END_OF_FILE:
-						exitFlag = true;
-						break;
-					case MarcReader::ERROR_INVALID_RECORD:
-						if (options.permissiveRead) {
-							numBadRecs++;
-						} else {
-							throw marcReader.getErrorMessage();
-						}
-						break;
-					default:
-						throw marcReader.getErrorMessage();
-					}
-				}
+			if (!convertRecord(counters)) {
 				break;
-			case FORMAT_MARCXML:
-				readStatus = marcXmlReader.next(record);
-				if (!readStatus) {
-					switch (marcXmlReader.getErrorCode()) {
-					case MarcXmlReader::END_OF_FILE:
-						exitFlag = true;
-						break;
-					default:
-						throw marcXmlReader.getErrorMessage();
-					}
-				}
-				break;
-			default:
-				throw std::string("unknown input format");
-			}
-
-			// Exit when flag is set (typically when end of file reached).
-			if (exitFlag) {
-				break;
-			}
-
-			// Write record to output file.
-			if (readStatus && recNo > options.skipRecs) {
-				numConvertedRecs++;
-				std::string textRecord, textRecordRecoded;
-
-				switch (options.outputFormat) {
-				case FORMAT_ISO2709:
-					marcWriter.write(record);
-					break;
-				case FORMAT_MARCXML:
-					marcXmlWriter.write(record);
-					break;
-				case FORMAT_TEXT:
-					char recordHeader[30];
-					if (numConvertedRecs > 1) {
-						sprintf(recordHeader, "\nRecord %d\n", recNo);
-					} else {
-						sprintf(recordHeader, "Record %d\n", recNo);
-					}
-
-					marcTextWriter.write(record, recordHeader, "\n");
-					break;
-				default:
-					throw std::string("unknown output format");
-				}
 			}
 
 			// Print process status.
 			time(&curTime);
 			if (curTime > prevTime) {
 				if (options.verboseLevel > 1) {
-					fprintf(stderr, "\rRecord: %d", recNo);
+					fprintf(stderr, "\rRecord: %d",
+						counters.recNo);
 				}
 
 				prevTime = curTime;
@@ -244,15 +273,20 @@ bool convertFile(void)
 			time(&curTime);
 			double usedTime = (double) (curTime - startTime);
 			int usedHours = (int) floor(usedTime / 3600);
-			int usedMinutes = (int) floor((usedTime - (usedHours * 3600)) / 60);
-			int usedSeconds = (int) (usedTime - (usedHours * 3600) - (usedMinutes * 60));
+			int usedMinutes = (int) floor((usedTime
+				- (usedHours * 3600)) / 60);
+			int usedSeconds = (int) (usedTime - (usedHours * 3600)
+				- (usedMinutes * 60));
 
 			if (options.verboseLevel > 1) {
 				fputc('\r', stderr);
 			}
-			fprintf(stderr, "Readed records: %d\n", recNo - 1);
-			fprintf(stderr, "Converted records: %d\n", numConvertedRecs);
-			fprintf(stderr, "Records with errors: %d\n", numBadRecs);
+			fprintf(stderr, "Readed records: %d\n",
+				counters.recNo - 1);
+			fprintf(stderr, "Converted records: %d\n",
+				counters.numConvertedRecs);
+			fprintf(stderr, "Records with errors: %d\n",
+				counters.numBadRecs);
 			fprintf(stderr, "Done in %d:%02d:%02d.\n",
 				usedHours, usedMinutes, usedSeconds);
 		}
@@ -261,7 +295,8 @@ bool convertFile(void)
 		if (options.verboseLevel > 1) {
 			fputc('\r', stderr);
 		}
-		fprintf(stderr, "Error in record %d: %s.\n", recNo, errorMessage.c_str());
+		fprintf(stderr, "Error in record %d: %s.\n",
+			counters.recNo, errorMessage.c_str());
 
 		// Close files.
 		if (inputFile && inputFile != stdin) {
@@ -280,7 +315,9 @@ bool convertFile(void)
 /*
  * Parse format string.
  */
-bool parseFormatString(const char *formatString, RecordFormat *format, const char **encoding)
+bool
+parseFormatString(const char *formatString, RecordFormat *format,
+	const char **encoding)
 {
 	// Check presence of format string.
 	if (!formatString || strlen(formatString) == 0) {
@@ -291,11 +328,17 @@ bool parseFormatString(const char *formatString, RecordFormat *format, const cha
 	const char *arg = formatString;
 	if (strlen(arg) == 0 || arg[0] == ',') {
 		*format = FORMAT_NULL;
-	} else if (strcmp(arg, "iso2709") == 0 || strncmp(arg, "iso2709,", 8) == 0) {
+	} else if (strcmp(arg, "iso2709") == 0
+		|| strncmp(arg, "iso2709,", 8) == 0)
+	{
 		*format = FORMAT_ISO2709;
-	} else if (strcmp(arg, "marcxml") == 0 || strncmp(arg, "marcxml,", 8) == 0) {
+	} else if (strcmp(arg, "marcxml") == 0
+		|| strncmp(arg, "marcxml,", 8) == 0)
+	{
 		*format = FORMAT_MARCXML;
-	} else if (strcmp(arg, "text") == 0 || strncmp(arg, "text,", 5) == 0) {
+	} else if (strcmp(arg, "text") == 0
+		|| strncmp(arg, "text,", 5) == 0)
+	{
 		*format = FORMAT_TEXT;
 	} else {
 		return false;
@@ -313,31 +356,34 @@ bool parseFormatString(const char *formatString, RecordFormat *format, const cha
 /*
  * Print help information.
  */
-void print_help(void)
+void
+print_help(void)
 {
 	int i;
 	const char *help[] = {
 		"marc-convert 1.3 (9 Mar 2013)\n",
-		"Convert MARC records between different formats and encodings.\n",
+		"Convert MARC records between different formats.\n",
 		"Copyright (c) 2013, Alexander Fronkin\n",
 		"\n",
 		"usage: marc-convert [-hpv]\n",
-		"                    [-f [<format>][,<encoding>]] [-t [<format>][,<encoding>]]\n",
-		"                    [-s <number of records>] [-n <number of records>]\n",
-		"                    [-o <output file>] [<input file>]\n",
+		"  [-f [<format>][,<encoding>]] [-t [<format>][,<encoding>]]\n",
+		"  [-s <number of records>] [-n <number of records>]\n",
+		"  [-o <output file>] [<input file>]\n",
 		"\n",
 		"  -h --help        give this help\n",
-		"  -f --from        format and encoding of records in input file\n",
-		"                   formats: 'iso2709' (default), 'marcxml'\n",
-		"                   default encoding: UTF-8\n",
+		"  -f --from        format and encoding of input file\n",
+		"                   formats: iso2709, marcxml\n",
+		"                   default format: iso2709\n",
+		"                   default encoding: utf-8\n",
 		"  -n --numrecs     number of records to convert\n",
 		"  -o --output      name of output file ('-' for stdout)\n",
 		"  -p --permissive  permissive reading (skip minor errors)\n",
 		"  -s --skiprecs    number of records to skip\n",
-		"  -t --to          format and encoding of records in output file\n",
-		"                   formats: 'iso2709', 'marcxml', 'text' (default)\n",
-		"                   default encoding: UTF-8\n",
-		"  -v --verbose     increase verbosity level (can be specified multiple times)\n",
+		"  -t --to          format and encoding of output file\n",
+		"                   formats: iso2709, marcxml, text\n",
+		"                   default format: text\n",
+		"                   default encoding: utf-8\n",
+		"  -v --verbose     increase verbosity level (repeatable)\n",
 		"  <input file>     name of input file ('-' for stdin)\n",
 		"\n",
 		NULL};
@@ -472,10 +518,11 @@ int main(int argc, char *argv[])
 	}
 
 	// Parse input format and encoding.
-	if (fromInfo
-		&& !parseFormatString(fromInfo, &options.inputFormat, &options.inputEncoding))
+	if (fromInfo && !parseFormatString(fromInfo, &options.inputFormat,
+		&options.inputEncoding))
 	{
-		fprintf(stderr, "Error: wrong format string '%s' specified.\n", fromInfo);
+		fprintf(stderr, "Error: wrong format string '%s' specified.\n",
+			fromInfo);
 		return 1;
 	}
 	if (options.inputFormat == FORMAT_NULL) {
@@ -483,10 +530,11 @@ int main(int argc, char *argv[])
 	}
 	
 	// Parse output format and encoding.
-	if (toInfo
-		&& !parseFormatString(toInfo, &options.outputFormat, &options.outputEncoding))
+	if (toInfo && !parseFormatString(toInfo, &options.outputFormat,
+		&options.outputEncoding))
 	{
-		fprintf(stderr, "Error: wrong format string '%s' specified.\n", toInfo);
+		fprintf(stderr, "Error: wrong format string '%s' specified.\n",
+			toInfo);
 		return 1;
 	}
 	if (options.outputFormat == FORMAT_NULL) {
