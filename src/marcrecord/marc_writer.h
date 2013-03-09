@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,19 +26,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined(MARC_WRITER_H)
-#define MARC_WRITER_H
+#ifndef MARCRECORD_SRC_MARC_WRITER_H
+#define MARCRECORD_SRC_MARC_WRITER_H
 
 #include <iconv.h>
 #include <string>
 #include "marcrecord.h"
+
+namespace marcrecord {
 
 /*
  * MARC (ISO 2709) records writer.
  */
 class MarcWriter {
 public:
-	/* Error codes. */
+	// Error codes.
 	enum ErrorCode {
 		OK = 0,
 		ERROR_ICONV = -1,
@@ -47,36 +49,45 @@ public:
 	};
 
 protected:
-	/* Code of last error. */
+	// Code of last error.
 	ErrorCode m_errorCode;
-	/* Message of last error. */
+	// Message of last error.
 	std::string m_errorMessage;
 
-	/* Output ISO 2709 file. */
+	// Output ISO 2709 file.
 	FILE *m_outputFile;
-	/* Encoding of output ISO 2709 file. */
+	// Encoding of output ISO 2709 file.
 	std::string m_outputEncoding;
-	/* Iconv descriptor for output encoding. */
+	// Iconv descriptor for output encoding.
 	iconv_t m_iconvDesc;
 
+private:
+	// Append control field data to the write buffer.
+	int appendControlField(char *fieldData, MarcRecord::FieldIt &fieldIt);
+	// Append subfield data to the write buffer.
+	int appendSubfield(char *fieldData,
+		MarcRecord::SubfieldIt &subfieldIt);
+
 public:
-	/* Constructor. */
+	// Constructor.
 	MarcWriter(FILE *outputFile = NULL, const char *outputEncoding = NULL);
-	/* Destructor. */
+	// Destructor.
 	~MarcWriter();
 
-	/* Get last error code. */
+	// Get last error code.
 	ErrorCode getErrorCode(void);
-	/* Get last error message. */
+	// Get last error message.
 	std::string & getErrorMessage(void);
 
-	/* Open output file. */
+	// Open output file.
 	bool open(FILE *outputFile, const char *outputEncoding = NULL);
-	/* Close output file. */
+	// Close output file.
 	void close(void);
 
-	/* Write record to ISO 2709 file. */
+	// Write record to ISO 2709 file.
 	bool write(MarcRecord &record);
 };
 
-#endif /* MARC_WRITER_H */
+} // namespace marcrecord
+
+#endif // MARCRECORD_SRC_MARC_WRITER_H

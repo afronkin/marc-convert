@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,21 +26,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined(MARCRECORD_TOOLS_H)
-#define MARCRECORD_TOOLS_H
+#ifndef MARCRECORD_SRC_MARCRECORD_TOOLS_H
+#define MARCRECORD_SRC_MARCRECORD_TOOLS_H
 
 #include <iconv.h>
 #include <string>
 
-/* Print formatted output to std::string. */
+namespace marcrecord {
+
+// Print formatted output to std::string.
 int snprintf(std::string &s, size_t n, const char *format, ...);
-/* Serialize XML string. */
+// Serialize XML string.
 std::string serialize_xml(std::string &s);
-/* Verify that all string characters are decimal digits in ASCII encoding. */
+// Verify that all string characters are decimal digits in ASCII encoding.
 int is_numeric(const char *s, size_t n);
-/* Convert encoding for std::string. */
+// Convert encoding for std::string.
 bool iconv(iconv_t iconv_desc, const std::string &src, std::string &dest);
-/* Convert encoding for std::string. */
+// Convert encoding for std::string.
 bool iconv(iconv_t iconv_desc, const char *src, size_t len, std::string &dest);
 
-#endif /* MARCRECORD_TOOLS_H */
+} // namespace marcrecord
+
+#endif // MARCRECORD_SRC_MARCRECORD_TOOLS_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,13 +33,17 @@
 #include "marcrecord_tools.h"
 #include "marc_writer.h"
 
+namespace marcrecord {
+
 #define ISO2709_RECORD_SEPARATOR	'\x1D'
 #define ISO2709_FIELD_SEPARATOR		'\x1E'
 #define ISO2709_IDENTIFIER_DELIMITER	'\x1F'
 
 #pragma pack(1)
 
-/* Structure of record directory entry. */
+/*
+ * Structure of record directory entry.
+ */
 struct RecordDirectoryEntry {
 	// Field tag.
 	char fieldTag[3];
@@ -48,22 +52,27 @@ struct RecordDirectoryEntry {
 	// Field starting position.
 	char fieldStartingPosition[5];
 };
+typedef struct RecordDirectoryEntry RecordDirectoryEntry;
 
 #pragma pack()
+
+} // namespace marcrecord
+
+using namespace marcrecord;
 
 /*
  * Constructor.
  */
 MarcWriter::MarcWriter(FILE *outputFile, const char *outputEncoding)
 {
-	/* Clear member variables. */
+	// Clear member variables.
 	m_iconvDesc = (iconv_t) -1;
 
 	if (outputFile) {
-		/* Open output file. */
+		// Open output file.
 		open(outputFile, outputEncoding);
 	} else {
-		/* Clear object state. */
+		// Clear object state.
 		close();
 	}
 }
@@ -73,14 +82,15 @@ MarcWriter::MarcWriter(FILE *outputFile, const char *outputEncoding)
  */
 MarcWriter::~MarcWriter()
 {
-	/* Close output file. */
+	// Close output file.
 	close();
 }
 
 /*
  * Get last error code.
  */
-MarcWriter::ErrorCode MarcWriter::getErrorCode(void)
+MarcWriter::ErrorCode
+MarcWriter::getErrorCode(void)
 {
 	return m_errorCode;
 }
@@ -88,7 +98,8 @@ MarcWriter::ErrorCode MarcWriter::getErrorCode(void)
 /*
  * Get last error message.
  */
-std::string & MarcWriter::getErrorMessage(void)
+std::string &
+MarcWriter::getErrorMessage(void)
 {
 	return m_errorMessage;
 }
@@ -96,28 +107,31 @@ std::string & MarcWriter::getErrorMessage(void)
 /*
  * Open output file.
  */
-bool MarcWriter::open(FILE *outputFile, const char *outputEncoding)
+bool
+MarcWriter::open(FILE *outputFile, const char *outputEncoding)
 {
-	/* Clear error code and message. */
+	// Clear error code and message.
 	m_errorCode = OK;
 	m_errorMessage = "";
 
-	/* Initialize output stream parameters. */
+	// Initialize output stream parameters.
 	m_outputFile = outputFile == NULL ? stdout : outputFile;
 	m_outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
 
-	/* Initialize encoding conversion. */
+	// Initialize encoding conversion.
 	if (outputEncoding == NULL
-		|| strcmp(outputEncoding, "UTF-8") == 0 || strcmp(outputEncoding, "utf-8") == 0)
+		|| strcmp(outputEncoding, "UTF-8") == 0
+		|| strcmp(outputEncoding, "utf-8") == 0)
 	{
 		m_iconvDesc = (iconv_t) -1;
 	} else {
-		/* Create iconv descriptor for output encoding conversion from UTF-8. */
+		// Create iconv descriptor for output encoding conversion.
 		m_iconvDesc = iconv_open(outputEncoding, "UTF-8");
 		if (m_iconvDesc == (iconv_t) -1) {
 			m_errorCode = ERROR_ICONV;
 			if (errno == EINVAL) {
-				m_errorMessage = "encoding conversion is not supported";
+				m_errorMessage =
+					"encoding conversion is not supported";
 			} else {
 				m_errorMessage = "iconv initialization failed";
 			}
@@ -131,14 +145,15 @@ bool MarcWriter::open(FILE *outputFile, const char *outputEncoding)
 /*
  * Close output file.
  */
-void MarcWriter::close(void)
+void
+MarcWriter::close(void)
 {
-	/* Finalize iconv. */
+	// Finalize iconv.
 	if (m_iconvDesc != (iconv_t) -1) {
 		iconv_close(m_iconvDesc);
 	}
 
-	/* Clear member variables. */
+	// Clear member variables.
 	m_errorCode = OK;
 	m_errorMessage = "";
 	m_outputFile = NULL;
@@ -149,121 +164,80 @@ void MarcWriter::close(void)
 /*
  * Write record to ISO 2709 file.
  */
-bool MarcWriter::write(MarcRecord &record)
+bool
+MarcWriter::write(MarcRecord &record)
 {
 	char recordBuf[100000];
-	std::string iconvBuf;
 
-	/* Copy record leader to buffer. */
-	memcpy(recordBuf, (char *) &record.m_leader, sizeof(struct MarcRecord::Leader));
+	// Copy record leader to buffer.
+	memcpy(recordBuf, (char *) &record.m_leader,
+		sizeof(MarcRecord::Leader));
 
-	/* Calculate base address of data and copy it to record buffer. */
-	unsigned int baseAddress = sizeof(struct MarcRecord::Leader) + record.m_fieldList.size()
-		* sizeof(struct RecordDirectoryEntry) + 1;
+	// Calculate base address of data and copy it to record buffer.
+	unsigned int baseAddress = sizeof(MarcRecord::Leader)
+		+ record.m_fieldList.size()
+		* sizeof(RecordDirectoryEntry) + 1;
 	char baseAddressBuf[6];
 	sprintf(baseAddressBuf, "%05d", baseAddress);
 	memcpy(recordBuf + 12, baseAddressBuf, 5);
 
-	/* Iterate all fields. */
-	char *directoryData = recordBuf + sizeof(struct MarcRecord::Leader);
+	// Iterate all fields.
+	char *directoryData = recordBuf + sizeof(MarcRecord::Leader);
 	char *fieldData = recordBuf + baseAddress;
 	for (MarcRecord::FieldIt fieldIt = record.m_fieldList.begin();
 		fieldIt != record.m_fieldList.end(); fieldIt++)
 	{
 		int fieldLength = 0;
 		if (fieldIt->m_tag < "010") {
-			if (m_iconvDesc == (iconv_t) -1) {
-				/* Copy control field to buffer. */
-				fieldLength = fieldIt->m_data.size();
-				if (fieldLength > 10000) {
-					m_errorCode = ERROR_DATASIZE;
-					m_errorMessage = "field size exceed ISO2709 limit";
-					return false;
-				}
-				memcpy(fieldData, fieldIt->m_data.c_str(), fieldLength);
-			} else {
-				/* Copy control field to buffer with encoding conversion. */
-				if (!iconv(m_iconvDesc, fieldIt->m_data, iconvBuf)) {
-					m_errorCode = ERROR_ICONV;
-					m_errorMessage = "encoding conversion failed";
-					return false;
-				}
-				fieldLength = iconvBuf.size();
-				if (fieldLength > 10000) {
-					m_errorCode = ERROR_DATASIZE;
-					m_errorMessage = "field size exceed ISO2709 limit";
-					return false;
-				}
-				memcpy(fieldData, iconvBuf.c_str(), fieldLength);
-			}
+			fieldLength = appendControlField(fieldData, fieldIt);
 			fieldData += fieldLength;
 		} else {
-			/* Copy indicators of data field to buffer. */
+			// Copy indicators of data field to buffer.
 			*(fieldData++) = fieldIt->m_ind1;
 			*(fieldData++) = fieldIt->m_ind2;
 			fieldLength += 2;
 
-			/* Iterate all subfields. */
-			for (MarcRecord::SubfieldIt subfieldIt = fieldIt->m_subfieldList.begin();
-				subfieldIt != fieldIt->m_subfieldList.end(); subfieldIt++)
+			// Iterate all subfields.
+			MarcRecord::SubfieldIt subfieldIt =
+				fieldIt->m_subfieldList.begin();
+			for (; subfieldIt != fieldIt->m_subfieldList.end();
+				subfieldIt++)
 			{
-				int subfieldLength;
-
-				*(fieldData++) = ISO2709_IDENTIFIER_DELIMITER;
-				*(fieldData++) = subfieldIt->m_id;
-				if (m_iconvDesc == (iconv_t) -1) {
-					/* Copy subfield to buffer. */
-					subfieldLength = subfieldIt->m_data.size();
-					if (subfieldLength > 10000) {
-						m_errorCode = ERROR_DATASIZE;
-						m_errorMessage = "field size exceed ISO2709 limit";
-						return false;
-					}
-					memcpy(fieldData, subfieldIt->m_data.c_str(),
-						subfieldLength);
-				} else {
-					/* Copy subfield to buffer with encoding conversion. */
-					if (!iconv(m_iconvDesc, subfieldIt->m_data, iconvBuf)) {
-						m_errorCode = ERROR_ICONV;
-						m_errorMessage = "encoding conversion failed";
-						return false;
-					}
-					subfieldLength = iconvBuf.size();
-					if (subfieldLength > 10000) {
-						m_errorCode = ERROR_DATASIZE;
-						m_errorMessage = "field size exceed ISO2709 limit";
-						return false;
-					}
-					memcpy(fieldData, iconvBuf.c_str(), subfieldLength);
-				}
+				int subfieldLength =
+					appendSubfield(fieldData, subfieldIt);
 				fieldData += subfieldLength;
-				fieldLength += subfieldLength + 2;
+				fieldLength += subfieldLength;
 			}
 		}
 
-		/* Set field separator at the end of field. */
+		// Set field separator at the end of field.
 		*(fieldData++) = ISO2709_FIELD_SEPARATOR;
 		fieldLength++;
 
-		/* Fill directory entry (it is safe to do this way because null character
-		   will be overwritten in next iteration and right after the cycle). */
-		sprintf(directoryData, "%.3s%04d%05d", fieldIt->m_tag.c_str(), fieldLength,
-			(int) (fieldData - recordBuf) - baseAddress - fieldLength);
-		directoryData += sizeof(struct RecordDirectoryEntry);
+		/*
+		 * Fill directory entry (it is safe to do this way because
+		 * null character will be overwritten in next iteration and
+		 * right after the cycle).
+		 */
+		int fieldOffset = (int) (fieldData - recordBuf) - baseAddress
+			- fieldLength;
+		sprintf(directoryData, "%.3s%04d%05d",
+			fieldIt->m_tag.c_str(), fieldLength, fieldOffset);
+		directoryData += sizeof(RecordDirectoryEntry);
 	}
 
-	/* Set field separator at the end of directory. */
+	// Set field separator at the end of directory.
 	directoryData[0] = ISO2709_FIELD_SEPARATOR;
-	/* Set record separator at the end of record. */
+	// Set record separator at the end of record.
 	*(fieldData++) = ISO2709_RECORD_SEPARATOR;
 
-	/* Calculate directory length and copy it to record buffer (can't use easy way here). */
+	// Calculate directory length and copy it to record buffer.
 	int recordLength = (int) (fieldData - recordBuf);
 	char recordLengthBuf[6];
 	sprintf(recordLengthBuf, "%05d", recordLength);
 	memcpy(recordBuf, recordLengthBuf, 5);
 
-	/* Write record buffer to file. */
+	// Write record buffer to file.
 	if (fwrite(recordBuf, recordLength, 1, m_outputFile) != 1) {
 		m_errorCode = ERROR_IO;
 		m_errorMessage = "i/o operation failed";
@@ -271,4 +245,81 @@ bool MarcWriter::write(MarcRecord &record)
 	}
 
 	return true;
+}
+
+/*
+ * Append control field data to the write buffer.
+ */
+int
+MarcWriter::appendControlField(char *fieldData, MarcRecord::FieldIt &fieldIt)
+{
+	int fieldLength;
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		// Copy control field to buffer.
+		fieldLength = fieldIt->m_data.size();
+		if (fieldLength > 10000) {
+			m_errorCode = ERROR_DATASIZE;
+			m_errorMessage = "field size exceed ISO2709 limit";
+			return false;
+		}
+		memcpy(fieldData, fieldIt->m_data.c_str(), fieldLength);
+	} else {
+		// Copy control field to buffer with encoding conversion.
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, fieldIt->m_data, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		fieldLength = iconvBuf.size();
+		if (fieldLength > 10000) {
+			m_errorCode = ERROR_DATASIZE;
+			m_errorMessage = "field size exceed ISO2709 limit";
+			return false;
+		}
+		memcpy(fieldData, iconvBuf.c_str(), fieldLength);
+	}
+
+	return fieldLength;
+}
+
+/*
+ * Append subfield data to the write buffer.
+ */
+int
+MarcWriter::appendSubfield(char *fieldData, MarcRecord::SubfieldIt &subfieldIt)
+{
+	int subfieldLength;
+
+	*(fieldData) = ISO2709_IDENTIFIER_DELIMITER;
+	*(fieldData + 1) = subfieldIt->m_id;
+	if (m_iconvDesc == (iconv_t) -1) {
+		// Copy subfield to buffer.
+		subfieldLength = subfieldIt->m_data.size();
+		if (subfieldLength > 10000) {
+			m_errorCode = ERROR_DATASIZE;
+			m_errorMessage = "field size exceed ISO2709 limit";
+			return false;
+		}
+		memcpy(fieldData + 2, subfieldIt->m_data.c_str(),
+			subfieldLength);
+	} else {
+		// Copy subfield to buffer with encoding conversion.
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, subfieldIt->m_data, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		subfieldLength = iconvBuf.size();
+		if (subfieldLength > 10000) {
+			m_errorCode = ERROR_DATASIZE;
+			m_errorMessage = "field size exceed ISO2709 limit";
+			return false;
+		}
+		memcpy(fieldData + 2, iconvBuf.c_str(), subfieldLength);
+	}
+
+	return subfieldLength + 2;
 }

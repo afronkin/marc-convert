@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,19 +26,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined(MARCXML_WRITER_H)
-#define MARCXML_WRITER_H
+#ifndef MARCRECORD_SRC_MARCXML_WRITER_H
+#define MARCRECORD_SRC_MARCXML_WRITER_H
 
 #include <iconv.h>
 #include <string>
 #include "marcrecord.h"
+
+namespace marcrecord {
 
 /*
  * MARCXML records writer.
  */
 class MarcXmlWriter {
 public:
-	/* Error codes. */
+	// Error codes.
 	enum ErrorCode {
 		OK = 0,
 		ERROR_ICONV = -1,
@@ -46,40 +48,43 @@ public:
 	};
 
 protected:
-	/* Code of last error. */
+	// Code of last error.
 	ErrorCode m_errorCode;
-	/* Message of last error. */
+	// Message of last error.
 	std::string m_errorMessage;
 
-	/* Output MARCXML file. */
+	// Output MARCXML file.
 	FILE *m_outputFile;
-	/* Encoding of output MARCXML file. */
+	// Encoding of output MARCXML file.
 	std::string m_outputEncoding;
-	/* Iconv descriptor for output encoding. */
+	// Iconv descriptor for output encoding.
 	iconv_t m_iconvDesc;
 
 public:
-	/* Constructor. */
-	MarcXmlWriter(FILE *outputFile = NULL, const char *outputEncoding = NULL);
-	/* Destructor. */
+	// Constructor.
+	MarcXmlWriter(FILE *outputFile = NULL,
+		const char *outputEncoding = NULL);
+	// Destructor.
 	~MarcXmlWriter();
 
-	/* Get last error code. */
+	// Get last error code.
 	ErrorCode getErrorCode(void);
-	/* Get last error message. */
+	// Get last error message.
 	std::string & getErrorMessage(void);
 
-	/* Open output file. */
+	// Open output file.
 	bool open(FILE *outputFile, const char *outputEncoding = NULL);
-	/* Close output file. */
+	// Close output file.
 	void close(void);
 
-	/* Write header to MARCXML file. */
+	// Write header to MARCXML file.
 	bool writeHeader(void);
-	/* Write footer to MARCXML file. */
+	// Write footer to MARCXML file.
 	bool writeFooter(void);
-	/* Write record to MARCXML file. */
+	// Write record to MARCXML file.
 	bool write(MarcRecord &record);
 };
 
-#endif /* MARCXML_WRITER_H */
+} // namespace marcrecord
+
+#endif // MARCRECORD_SRC_MARCXML_WRITER_H

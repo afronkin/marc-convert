@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,8 @@
 #include "marcrecord.h"
 #include "marcrecord_tools.h"
 
+using namespace marcrecord;
+
 /*
  * Constructor.
  */
@@ -58,12 +60,13 @@ MarcRecord::~MarcRecord()
 /*
  * Clear record.
  */
-void MarcRecord::clear(void)
+void
+MarcRecord::clear(void)
 {
-	/* Clear field list. */
+	// Clear field list.
 	m_fieldList.clear();
 
-	/* Reset record leader. */
+	// Reset record leader.
 	memset(m_leader.recordLength, ' ', sizeof(m_leader.recordLength));
 	m_leader.recordStatus = 'n';
 	m_leader.recordType = 'a';
@@ -85,7 +88,8 @@ void MarcRecord::clear(void)
 /*
  * Get record format variant.
  */
-MarcRecord::FormatVariant MarcRecord::getFormatVariant(void)
+MarcRecord::FormatVariant
+MarcRecord::getFormatVariant(void)
 {
 	return m_formatVariant;
 }
@@ -93,7 +97,8 @@ MarcRecord::FormatVariant MarcRecord::getFormatVariant(void)
 /*
  * Set record format variant.
  */
-void MarcRecord::setFormatVariant(FormatVariant formatVariant)
+void
+MarcRecord::setFormatVariant(FormatVariant formatVariant)
 {
 	m_formatVariant = formatVariant;
 }
@@ -101,7 +106,8 @@ void MarcRecord::setFormatVariant(FormatVariant formatVariant)
 /*
  * Get record leader.
  */
-MarcRecord::Leader & MarcRecord::getLeader(void)
+MarcRecord::Leader &
+MarcRecord::getLeader(void)
 {
 	return m_leader;
 }
@@ -109,26 +115,29 @@ MarcRecord::Leader & MarcRecord::getLeader(void)
 /*
  * Set record leader.
  */
-void MarcRecord::setLeader(const Leader &leader)
+void
+MarcRecord::setLeader(const Leader &leader)
 {
 	m_leader = leader;
 }
 
-void MarcRecord::setLeader(const std::string &leaderData)
+void
+MarcRecord::setLeader(const std::string &leaderData)
 {
 	memcpy((void *) &m_leader, leaderData.c_str(),
-		std::min(sizeof(struct Leader), leaderData.size()));
+		std::min(sizeof(Leader), leaderData.size()));
 }
 
 /*
  * Get list of fields.
  */
-MarcRecord::FieldRefList MarcRecord::getFields(const std::string &fieldTag)
+MarcRecord::FieldRefList
+MarcRecord::getFields(const std::string &fieldTag)
 {
 	FieldRefList resultFieldList;
 	FieldIt fieldIt;
 
-	/* Check fields in list. */
+	// Check fields in list.
 	for (fieldIt = m_fieldList.begin(); fieldIt != m_fieldList.end();
 		fieldIt++)
 	{
@@ -143,11 +152,12 @@ MarcRecord::FieldRefList MarcRecord::getFields(const std::string &fieldTag)
 /*
  * Get field.
  */
-MarcRecord::FieldIt MarcRecord::getField(const std::string &fieldTag)
+MarcRecord::FieldIt
+MarcRecord::getField(const std::string &fieldTag)
 {
 	FieldIt fieldIt;
 
-	/* Check fields in list. */
+	// Check fields in list.
 	for (fieldIt = m_fieldList.begin(); fieldIt != m_fieldList.end();
 		fieldIt++)
 	{
@@ -162,25 +172,29 @@ MarcRecord::FieldIt MarcRecord::getField(const std::string &fieldTag)
 /*
  * Add field to the end of record.
  */
-MarcRecord::FieldIt MarcRecord::addField(const Field &field)
+MarcRecord::FieldIt
+MarcRecord::addField(const Field &field)
 {
-	/* Append field to the list. */
+	// Append field to the list.
 	FieldIt fieldIt = m_fieldList.insert(m_fieldList.end(), field);
 	return fieldIt;
 }
 
-MarcRecord::FieldIt MarcRecord::addControlField(const std::string &fieldTag,
+MarcRecord::FieldIt
+MarcRecord::addControlField(const std::string &fieldTag,
 	const std::string &fieldData)
 {
-	/* Append field to the list. */
-	FieldIt fieldIt = m_fieldList.insert(m_fieldList.end(), Field(fieldTag, fieldData));
+	// Append field to the list.
+	FieldIt fieldIt = m_fieldList.insert(m_fieldList.end(),
+		Field(fieldTag, fieldData));
 	return fieldIt;
 }
 
-MarcRecord::FieldIt MarcRecord::addDataField(const std::string &fieldTag,
+MarcRecord::FieldIt
+MarcRecord::addDataField(const std::string &fieldTag,
 	char fieldInd1, char fieldInd2)
 {
-	/* Append field to the list. */
+	// Append field to the list.
 	FieldIt fieldIt = m_fieldList.insert(m_fieldList.end(),
 		Field(fieldTag, fieldInd1, fieldInd2));
 	return fieldIt;
@@ -189,53 +203,60 @@ MarcRecord::FieldIt MarcRecord::addDataField(const std::string &fieldTag,
 /*
  * Add field to the record before specified field.
  */
-MarcRecord::FieldIt MarcRecord::addFieldBefore(FieldIt nextFieldIt, const Field &field)
+MarcRecord::FieldIt
+MarcRecord::addFieldBefore(FieldIt nextFieldIt, const Field &field)
 {
-	/* Append field to the list. */
+	// Append field to the list.
 	FieldIt fieldIt = m_fieldList.insert(nextFieldIt, field);
 	return fieldIt;
 }
 
-MarcRecord::FieldIt MarcRecord::addControlFieldBefore(FieldIt nextFieldIt,
+MarcRecord::FieldIt
+MarcRecord::addControlFieldBefore(FieldIt nextFieldIt,
 	const std::string &fieldTag, const std::string &fieldData)
 {
-	/* Append field to the list. */
-	FieldIt fieldIt = m_fieldList.insert(nextFieldIt, Field(fieldTag, fieldData));
+	// Append field to the list.
+	FieldIt fieldIt = m_fieldList.insert(nextFieldIt,
+		Field(fieldTag, fieldData));
 	return fieldIt;
 }
 
-MarcRecord::FieldIt MarcRecord::addDataFieldBefore(FieldIt nextFieldIt,
+MarcRecord::FieldIt
+MarcRecord::addDataFieldBefore(FieldIt nextFieldIt,
 	const std::string &fieldTag, char fieldInd1, char fieldInd2)
 {
-	/* Append field to the list. */
-	FieldIt fieldIt = m_fieldList.insert(nextFieldIt, Field(fieldTag, fieldInd1, fieldInd2));
+	// Append field to the list.
+	FieldIt fieldIt = m_fieldList.insert(nextFieldIt,
+		Field(fieldTag, fieldInd1, fieldInd2));
 	return fieldIt;
 }
 
 /*
  * Remove field from the record.
  */
-void MarcRecord::removeField(FieldIt fieldIt)
+void
+MarcRecord::removeField(FieldIt fieldIt)
 {
-	/* Remove field from the list. */
+	// Remove field from the list.
 	m_fieldList.erase(fieldIt);
 }
 
 /*
  * Format record to string for printing.
  */
-std::string MarcRecord::toString(void)
+std::string
+MarcRecord::toString(void)
 {
-	/* Print leader. */
+	// Print leader.
 	std::string textRecord = "Leader [";
-	textRecord.append((const char *) &m_leader, sizeof(struct Leader));
+	textRecord.append((const char *) &m_leader, sizeof(Leader));
 	textRecord += "]";
 
-	/* Iterate all fields. */
+	// Iterate all fields.
 	for (MarcRecord::FieldIt fieldIt = m_fieldList.begin();
 		fieldIt != m_fieldList.end(); fieldIt++)
 	{
-		/* Print field. */
+		// Print field.
 		textRecord += "\n" + fieldIt->toString();
 	}
 

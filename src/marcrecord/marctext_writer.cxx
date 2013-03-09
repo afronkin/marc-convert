@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,19 +33,21 @@
 #include "marcrecord_tools.h"
 #include "marctext_writer.h"
 
+using namespace marcrecord;
+
 /*
  * Constructor.
  */
 MarcTextWriter::MarcTextWriter(FILE *outputFile, const char *outputEncoding)
 {
-	/* Clear member variables. */
+	// Clear member variables.
 	m_iconvDesc = (iconv_t) -1;
 
 	if (outputFile) {
-		/* Open output file. */
+		// Open output file.
 		open(outputFile, outputEncoding);
 	} else {
-		/* Clear object state. */
+		// Clear object state.
 		close();
 	}
 }
@@ -55,14 +57,15 @@ MarcTextWriter::MarcTextWriter(FILE *outputFile, const char *outputEncoding)
  */
 MarcTextWriter::~MarcTextWriter()
 {
-	/* Close output file. */
+	// Close output file.
 	close();
 }
 
 /*
  * Get last error code.
  */
-MarcTextWriter::ErrorCode MarcTextWriter::getErrorCode(void)
+MarcTextWriter::ErrorCode
+MarcTextWriter::getErrorCode(void)
 {
 	return m_errorCode;
 }
@@ -70,7 +73,8 @@ MarcTextWriter::ErrorCode MarcTextWriter::getErrorCode(void)
 /*
  * Get last error message.
  */
-std::string & MarcTextWriter::getErrorMessage(void)
+std::string &
+MarcTextWriter::getErrorMessage(void)
 {
 	return m_errorMessage;
 }
@@ -78,28 +82,31 @@ std::string & MarcTextWriter::getErrorMessage(void)
 /*
  * Open output file.
  */
-bool MarcTextWriter::open(FILE *outputFile, const char *outputEncoding)
+bool
+MarcTextWriter::open(FILE *outputFile, const char *outputEncoding)
 {
-	/* Clear error code and message. */
+	// Clear error code and message.
 	m_errorCode = OK;
 	m_errorMessage = "";
 
-	/* Initialize output stream parameters. */
+	// Initialize output stream parameters.
 	m_outputFile = outputFile == NULL ? stdout : outputFile;
 	m_outputEncoding = outputEncoding == NULL ? "" : outputEncoding;
 
-	/* Initialize encoding conversion. */
+	// Initialize encoding conversion.
 	if (outputEncoding == NULL
-		|| strcmp(outputEncoding, "UTF-8") == 0 || strcmp(outputEncoding, "utf-8") == 0)
+		|| strcmp(outputEncoding, "UTF-8") == 0
+		|| strcmp(outputEncoding, "utf-8") == 0)
 	{
 		m_iconvDesc = (iconv_t) -1;
 	} else {
-		/* Create iconv descriptor for output encoding conversion from UTF-8. */
+		// Create iconv descriptor for output encoding conversion.
 		m_iconvDesc = iconv_open(outputEncoding, "UTF-8");
 		if (m_iconvDesc == (iconv_t) -1) {
 			m_errorCode = ERROR_ICONV;
 			if (errno == EINVAL) {
-				m_errorMessage = "encoding conversion is not supported";
+				m_errorMessage =
+					"encoding conversion is not supported";
 			} else {
 				m_errorMessage = "iconv initialization failed";
 			}
@@ -113,14 +120,15 @@ bool MarcTextWriter::open(FILE *outputFile, const char *outputEncoding)
 /*
  * Close output file.
  */
-void MarcTextWriter::close(void)
+void
+MarcTextWriter::close(void)
 {
-	/* Finalize iconv. */
+	// Finalize iconv.
 	if (m_iconvDesc != (iconv_t) -1) {
 		iconv_close(m_iconvDesc);
 	}
 
-	/* Clear member variables. */
+	// Clear member variables.
 	m_errorCode = OK;
 	m_errorMessage = "";
 	m_outputFile = NULL;
@@ -131,26 +139,32 @@ void MarcTextWriter::close(void)
 /*
  * Write record to MARC text file.
  */
-bool MarcTextWriter::write(MarcRecord &record, const char *header, const char *footer)
+bool
+MarcTextWriter::write(MarcRecord &record,
+	const char *header, const char *footer)
 {
 	std::string recordBuf = header + record.toString() + footer;
 
 	if (m_iconvDesc == (iconv_t) -1) {
-		/* Write MARCXML record. */
-		if (fwrite(recordBuf.c_str(), recordBuf.size(), 1, m_outputFile) != 1) {
+		// Write MARCXML record.
+		if (fwrite(recordBuf.c_str(), recordBuf.size(), 1,
+			m_outputFile) != 1)
+		{
 			m_errorCode = ERROR_IO;
 			m_errorMessage = "i/o operation failed";
 			return false;
 		}
 	} else {
-		/* Write MARCXML record with encoding conversion. */
+		// Write MARCXML record with encoding conversion.
 		std::string iconvBuf;
 		if (!iconv(m_iconvDesc, recordBuf, iconvBuf)) {
 			m_errorCode = ERROR_ICONV;
 			m_errorMessage = "encoding conversion failed";
 			return false;
 		}
-		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1, m_outputFile) != 1) {
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
+			m_outputFile) != 1)
+		{
 			m_errorCode = ERROR_IO;
 			m_errorMessage = "i/o operation failed";
 			return false;

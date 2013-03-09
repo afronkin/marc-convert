@@ -38,6 +38,8 @@
 #include "marcrecord/marcxml_reader.h"
 #include "marcrecord/marcxml_writer.h"
 
+using namespace marcrecord;
+
 /* Record format variants */
 enum RecordFormat { FORMAT_NULL, FORMAT_ISO2709, FORMAT_MARCXML, FORMAT_TEXT };
 

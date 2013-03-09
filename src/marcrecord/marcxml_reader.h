@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,19 +26,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined(MARCXML_READER_H)
-#define MARCXML_READER_H
+#ifndef MARCRECORD_SRC_MARCXML_READER_H
+#define MARCRECORD_SRC_MARCXML_READER_H
 
 #include <string>
 #include "marcrecord.h"
 #include "expat/expat.h"
+
+namespace marcrecord {
 
 /*
  * MARCXML records reader.
  */
 class MarcXmlReader {
 public:
-	/* XML parser state structure definition. */
+	// XML parser state structure definition.
 	struct XmlParserState {
 		XML_Parser xmlParser;
 		bool done;
@@ -50,8 +52,9 @@ public:
 		MarcRecord::SubfieldIt subfieldIt;
 		std::string characterData;
 	};
+	typedef struct XmlParserState XmlParserState;
 
-	/* Error codes. */
+	// Error codes.
 	enum ErrorCode {
 		OK = 0,
 		END_OF_FILE = 1,
@@ -59,47 +62,50 @@ public:
 	};
 
 protected:
-	/* Code of last error. */
+	// Code of last error.
 	ErrorCode m_errorCode;
-	/* Message of last error. */
+	// Message of last error.
 	std::string m_errorMessage;
 
-	/* Input MARCXML file. */
+	// Input MARCXML file.
 	FILE *m_inputFile;
-	/* Encoding of input MARCXML file. */
+	// Encoding of input MARCXML file.
 	std::string m_inputEncoding;
 
-	/* Automatic error correction mode. */
+	// Automatic error correction mode.
 	bool m_autoCorrectionMode;
 
-	/* XML parser. */
+	// XML parser.
 	XML_Parser m_xmlParser;
-	/* XML parser state. */
-	struct XmlParserState m_parserState;
-	/* Record buffer. */
+	// XML parser state.
+	XmlParserState m_parserState;
+	// Record buffer.
 	char m_buffer[4096];
 
 public:
-	/* Constructor. */
-	MarcXmlReader(FILE *inputFile = NULL, const char *inputEncoding = NULL);
-	/* Destructor. */
+	// Constructor.
+	MarcXmlReader(FILE *inputFile = NULL,
+		const char *inputEncoding = NULL);
+	// Destructor.
 	~MarcXmlReader();
 
-	/* Get last error code. */
+	// Get last error code.
 	ErrorCode getErrorCode(void);
-	/* Get last error message. */
+	// Get last error message.
 	std::string & getErrorMessage(void);
 
-	/* Set automatic error correction mode. */
+	// Set automatic error correction mode.
 	void setAutoCorrectionMode(bool autoCorrectionMode = true);
 
-	/* Open input file and initialize parser. */
+	// Open input file and initialize parser.
 	void open(FILE *inputFile, const char *inputEncoding = NULL);
-	/* Close input file and finalize parser. */
+	// Close input file and finalize parser.
 	void close(void);
 
-	/* Read next record from MARCXML file. */
+	// Read next record from MARCXML file.
 	bool next(MarcRecord &record);
 };
 
-#endif /* MARCXML_READER_H */
+} // namespace marcrecord
+
+#endif // MARCRECORD_SRC_MARCXML_READER_H

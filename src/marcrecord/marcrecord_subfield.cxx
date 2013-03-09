@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,8 @@
 
 #include "marcrecord.h"
 
+using namespace marcrecord;
+
 /*
  * Constructor.
  */
@@ -41,7 +43,8 @@ MarcRecord::Subfield::Subfield(char id, const std::string &data)
 /*
  * Clear subfield data.
  */
-void MarcRecord::Subfield::clear(void)
+void
+MarcRecord::Subfield::clear(void)
 {
 	m_id = ' ';
 	m_data.erase();
@@ -50,7 +53,8 @@ void MarcRecord::Subfield::clear(void)
 /*
  * Get identifier of subfield.
  */
-char & MarcRecord::Subfield::getId(void)
+char &
+MarcRecord::Subfield::getId(void)
 {
 	return m_id;
 }
@@ -58,7 +62,8 @@ char & MarcRecord::Subfield::getId(void)
 /*
  * Set identifier of subfield.
  */
-void MarcRecord::Subfield::setId(const char &id)
+void
+MarcRecord::Subfield::setId(const char &id)
 {
 	m_id = id;
 }
@@ -66,7 +71,8 @@ void MarcRecord::Subfield::setId(const char &id)
 /*
  * Get data of subfield.
  */
-std::string & MarcRecord::Subfield::getData(void)
+std::string &
+MarcRecord::Subfield::getData(void)
 {
 	return m_data;
 }
@@ -74,7 +80,8 @@ std::string & MarcRecord::Subfield::getData(void)
 /*
  * Set data of subfield.
  */
-void MarcRecord::Subfield::setData(const std::string &data)
+void
+MarcRecord::Subfield::setData(const std::string &data)
 {
 	m_data = data;
 }
@@ -82,7 +89,8 @@ void MarcRecord::Subfield::setData(const std::string &data)
 /*
  * Check presence of embedded field.
  */
-bool MarcRecord::Subfield::isEmbedded(void)
+bool
+MarcRecord::Subfield::isEmbedded(void)
 {
 	return (m_id == '1' ? true : false);
 }
@@ -90,7 +98,8 @@ bool MarcRecord::Subfield::isEmbedded(void)
 /*
  * Get tag of embedded field.
  */
-std::string MarcRecord::Subfield::getEmbeddedTag(void)
+std::string
+MarcRecord::Subfield::getEmbeddedTag(void)
 {
 	if (m_id != '1') {
 		return "";
@@ -102,7 +111,8 @@ std::string MarcRecord::Subfield::getEmbeddedTag(void)
 /*
  * Get indicator 1 of embedded field.
  */
-char MarcRecord::Subfield::getEmbeddedInd1(void)
+char
+MarcRecord::Subfield::getEmbeddedInd1(void)
 {
 	if (m_id != '1' || m_data.substr(0, 3) < "010") {
 		return '?';
@@ -114,7 +124,8 @@ char MarcRecord::Subfield::getEmbeddedInd1(void)
 /*
  * Get indicator 2 of embedded field.
  */
-char MarcRecord::Subfield::getEmbeddedInd2(void)
+char
+MarcRecord::Subfield::getEmbeddedInd2(void)
 {
 	if (m_id != '1' || m_data.substr(0, 3) < "010") {
 		return '?';
@@ -126,7 +137,8 @@ char MarcRecord::Subfield::getEmbeddedInd2(void)
 /*
  * Get data of embedded field.
  */
-std::string MarcRecord::Subfield::getEmbeddedData(void)
+std::string
+MarcRecord::Subfield::getEmbeddedData(void)
 {
 	if (m_id != '1' || m_data.substr(0, 3) >= "010") {
 		return "";

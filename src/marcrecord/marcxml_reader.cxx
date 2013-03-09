@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,30 +34,38 @@
 #include "marcrecord.h"
 #include "marcxml_reader.h"
 
+namespace marcrecord {
+
 extern "C" { 
-/* XML start element handler for expat library. */
-void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML_Char **atts);
-/* XML end element handler for expat library. */
+// XML start element handler for expat library.
+void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name,
+	const XML_Char **atts);
+// XML end element handler for expat library.
 void XMLCALL marcXmlEndElement(void *userData, const XML_Char *name);
-/* XML character data handler for expat library. */
+// XML character data handler for expat library.
 void XMLCALL marcXmlCharacterData(void *userData, const XML_Char *s, int len);
-/* XML unknown encoding handler for expat library. */
-int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Encoding *info);
-}
+// XML unknown encoding handler for expat library.
+int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding,
+	XML_Encoding *info);
+} // extern "C"
+
+} // namespace marcrecord
+
+using namespace marcrecord;
 
 /*
  * Constructor.
  */
 MarcXmlReader::MarcXmlReader(FILE *inputFile, const char *inputEncoding)
 {
-	/* Clear member variables. */
+	// Clear member variables.
 	m_autoCorrectionMode = false;
 
 	if (inputFile) {
-		/* Open input file and initialize parser. */
+		// Open input file and initialize parser.
 		open(inputFile, inputEncoding);
 	} else {
-		/* Clear object state. */
+		// Clear object state.
 		m_xmlParser = NULL;
 		close();
 	}
@@ -68,14 +76,15 @@ MarcXmlReader::MarcXmlReader(FILE *inputFile, const char *inputEncoding)
  */
 MarcXmlReader::~MarcXmlReader()
 {
-	/* Close input file and finalize parser. */
+	// Close input file and finalize parser.
 	close();
 }
 
 /*
  * Get last error code.
  */
-MarcXmlReader::ErrorCode MarcXmlReader::getErrorCode(void)
+MarcXmlReader::ErrorCode
+MarcXmlReader::getErrorCode(void)
 {
 	return m_errorCode;
 }
@@ -83,7 +92,8 @@ MarcXmlReader::ErrorCode MarcXmlReader::getErrorCode(void)
 /*
  * Get last error message.
  */
-std::string & MarcXmlReader::getErrorMessage(void)
+std::string &
+MarcXmlReader::getErrorMessage(void)
 {
 	return m_errorMessage;
 }
@@ -91,7 +101,8 @@ std::string & MarcXmlReader::getErrorMessage(void)
 /*
  * Set automatic error correction mode.
  */
-void MarcXmlReader::setAutoCorrectionMode(bool autoCorrectionMode)
+void
+MarcXmlReader::setAutoCorrectionMode(bool autoCorrectionMode)
 {
 	m_autoCorrectionMode = autoCorrectionMode;
 }
@@ -99,24 +110,27 @@ void MarcXmlReader::setAutoCorrectionMode(bool autoCorrectionMode)
 /*
  * Open input file and initialize parser.
  */
-void MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
+void
+MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
 {
-	/* Clear error code and message. */
+	// Clear error code and message.
 	m_errorCode = OK;
 	m_errorMessage = "";
 
-	/* Initialize input stream parameters. */
+	// Initialize input stream parameters.
 	m_inputFile = inputFile == NULL ? stdin : inputFile;
 	m_inputEncoding = inputEncoding == NULL ? "" : inputEncoding;
 
-	/* Create XML parser. */
+	// Create XML parser.
 	m_xmlParser = XML_ParserCreate(inputEncoding);
 	XML_SetUserData(m_xmlParser, &m_parserState);
-	XML_SetElementHandler(m_xmlParser, marcXmlStartElement, marcXmlEndElement);
+	XML_SetElementHandler(m_xmlParser,
+		marcXmlStartElement, marcXmlEndElement);
 	XML_SetCharacterDataHandler(m_xmlParser, marcXmlCharacterData);
-	XML_SetUnknownEncodingHandler(m_xmlParser, marcXmlUnknownEncoding, NULL);
+	XML_SetUnknownEncodingHandler(m_xmlParser,
+		marcXmlUnknownEncoding, NULL);
 
-	/* Initialize XML parser state. */
+	// Initialize XML parser state.
 	m_parserState.xmlParser = m_xmlParser;
 	m_parserState.done = false;
 	m_parserState.paused = false;
@@ -128,14 +142,15 @@ void MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
 /*
  * Close input file and finalize parser.
  */
-void MarcXmlReader::close(void)
+void
+MarcXmlReader::close(void)
 {
-	/* Free XML parser. */
+	// Free XML parser.
 	if (m_xmlParser) {
 		XML_ParserFree(m_xmlParser);
 	}
 
-	/* Clear member variables. */
+	// Clear member variables.
 	m_errorCode = OK;
 	m_errorMessage = "";
 	m_inputFile = NULL;
@@ -143,7 +158,7 @@ void MarcXmlReader::close(void)
 	m_autoCorrectionMode = false;
 	m_xmlParser = NULL;
 
-	/* Clear XML parser state. */
+	// Clear XML parser state.
 	m_parserState.xmlParser = NULL;
 	m_parserState.done = false;
 	m_parserState.paused = false;
@@ -155,43 +170,49 @@ void MarcXmlReader::close(void)
 /*
  * Read next record from MARCXML file.
  */
-bool MarcXmlReader::next(MarcRecord &record)
+bool
+MarcXmlReader::next(MarcRecord &record)
 {
 	enum XML_Status parserResult;
 
-	/* Clear error code and message. */
+	// Clear error code and message.
 	m_errorCode = OK;
 	m_errorMessage = "";
 
-	/* Clear record and initialize record pointer. */
+	// Clear record and initialize record pointer.
 	record.clear();
 	m_parserState.record = &record;
 
-	/* Parse MARCXML file. */
+	// Parse MARCXML file.
 	do {
 		if (m_parserState.paused) {
-			/* Resume stopped parser. */
+			// Resume stopped parser.
 			m_parserState.paused = false;
 			parserResult = XML_ResumeParser(m_xmlParser);
 		} else {
-			/* Read and parse buffer from file. */
-			size_t dataLength = (int) fread(m_buffer, 1, sizeof(m_buffer), m_inputFile);
+			// Read and parse buffer from file.
+			size_t dataLength = (int) fread(m_buffer,
+				1, sizeof(m_buffer), m_inputFile);
 			m_parserState.done = dataLength < sizeof(m_buffer);
-			parserResult = XML_Parse(m_xmlParser, m_buffer, dataLength,
-				m_parserState.done);
+			parserResult = XML_Parse(m_xmlParser,
+				m_buffer, dataLength, m_parserState.done);
 		}
 
-		/* Handle parser errors. */
+		// Handle parser errors.
 		if (parserResult == XML_STATUS_ERROR) {
 			record.clear();
 			m_parserState.parentTag = "";
 			m_errorCode = ERROR_XML_PARSER;
-			m_errorMessage = XML_ErrorString(XML_GetErrorCode(m_xmlParser));
+			m_errorMessage =
+				XML_ErrorString(XML_GetErrorCode(m_xmlParser));
 			return false;
 		}
 	} while (!m_parserState.done && !m_parserState.paused);
 
-	/* Finish if parser wasn't paused (means there is no more tags 'record'). */
+	/*
+	 * Finish if parser wasn't paused
+	 * (means there is no more tags 'record').
+	 */
 	if (!m_parserState.paused) {
 		m_errorCode = END_OF_FILE;
 		return false;
@@ -200,23 +221,31 @@ bool MarcXmlReader::next(MarcRecord &record)
 	return true;
 }
 
+namespace marcrecord {
+
 /*
  * XML start element handler for expat library.
  */
-void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML_Char **atts)
+void XMLCALL
+marcXmlStartElement(void *userData, const XML_Char *name,
+	const XML_Char **atts)
 {
-	struct MarcXmlReader::XmlParserState *parserState =
-		(struct MarcXmlReader::XmlParserState *) userData;
+	MarcXmlReader::XmlParserState *parserState =
+		(MarcXmlReader::XmlParserState *) userData;
 
-	/* Select MARCXML element. */
+	// Select MARCXML element.
 	if (strcmp(name, "record") == 0 && parserState->parentTag == "") {
-		/* Set parent tag. */
+		// Set parent tag.
 		parserState->parentTag = name;
-	} else if (strcmp(name, "leader") == 0 && parserState->parentTag == "record") {
-		/* Set parent tag. */
+	} else if (strcmp(name, "leader") == 0
+		&& parserState->parentTag == "record")
+	{
+		// Set parent tag.
 		parserState->parentTag = name;
-	} else if (strcmp(name, "controlfield") == 0 && parserState->parentTag == "record") {
-		/* Get attribute 'tag' for control field. */
+	} else if (strcmp(name, "controlfield") == 0
+		&& parserState->parentTag == "record")
+	{
+		// Get attribute 'tag' for control field.
 		char *tag = (char *) "";
 
 		for (int i = 0; atts[i]; i += 2) {
@@ -225,12 +254,15 @@ void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML
 			}
 		}
 
-		/* Add control field to the record. */
-		parserState->fieldIt = parserState->record->addControlField(tag);
-		/* Set parent tag. */
+		// Add control field to the record.
+		parserState->fieldIt =
+			parserState->record->addControlField(tag);
+		// Set parent tag.
 		parserState->parentTag = name;
-	} else if (strcmp(name, "datafield") == 0 && parserState->parentTag == "record") {
-		/* Get attributes 'tag', 'ind1, 'ind2' for data field. */
+	} else if (strcmp(name, "datafield") == 0
+		&& parserState->parentTag == "record")
+	{
+		// Get attributes 'tag', 'ind1, 'ind2' for data field.
 		char *tag = (char *) "";
 		char ind1 = ' ', ind2 = ' ';
 
@@ -244,12 +276,15 @@ void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML
 			}
 		}
 
-		/* Add data field to the record. */
-		parserState->fieldIt = parserState->record->addDataField(tag, ind1, ind2);
-		/* Set parent tag. */
+		// Add data field to the record.
+		parserState->fieldIt =
+			parserState->record->addDataField(tag, ind1, ind2);
+		// Set parent tag.
 		parserState->parentTag = name;
-	} else if (strcmp(name, "subfield") == 0 && parserState->parentTag == "datafield") {
-		/* Get attribute 'code' for subfield. */
+	} else if (strcmp(name, "subfield") == 0
+		&& parserState->parentTag == "datafield")
+	{
+		// Get attribute 'code' for subfield.
 		char subfieldId = ' ';
 
 		for (int i = 0; atts[i]; i += 2) {
@@ -258,53 +293,55 @@ void XMLCALL marcXmlStartElement(void *userData, const XML_Char *name, const XML
 			}
 		}
 
-		/* Add subfield to the data field. */
-		parserState->subfieldIt = parserState->fieldIt->addSubfield(subfieldId);
-		/* Set parent tag. */
+		// Add subfield to the data field.
+		parserState->subfieldIt =
+			parserState->fieldIt->addSubfield(subfieldId);
+		// Set parent tag.
 		parserState->parentTag = name;
 	}
 
-	/* Clear character data. */
+	// Clear character data.
 	parserState->characterData.erase();
 }
 
 /*
  * XML end element handler for expat library.
  */
-void XMLCALL marcXmlEndElement(void *userData, const XML_Char *name)
+void XMLCALL
+marcXmlEndElement(void *userData, const XML_Char *name)
 {
-	struct MarcXmlReader::XmlParserState *parserState =
-		(struct MarcXmlReader::XmlParserState *) userData;
+	MarcXmlReader::XmlParserState *parserState =
+		(MarcXmlReader::XmlParserState *) userData;
 
-	/* Check if start and end tags are equal. */
+	// Check if start and end tags are equal.
 	if (parserState->parentTag != name) {
 		return;
 	}
 
-	/* Select MARCXML element. */
+	// Select MARCXML element.
 	if (strcmp(name, "record") == 0) {
-		/* Restore parent tag. */
+		// Restore parent tag.
 		parserState->parentTag = "";
-		/* Pause parser. */
+		// Pause parser.
 		parserState->paused = true;
 		XML_StopParser(parserState->xmlParser, XML_TRUE);
 	} else if (strcmp(name, "leader") == 0) {
-		/* Restore parent tag. */
+		// Restore parent tag.
 		parserState->parentTag = "record";
-		/* Set record leader. */
+		// Set record leader.
 		parserState->record->setLeader(parserState->characterData);
 	} else if (strcmp(name, "controlfield") == 0) {
-		/* Restore parent tag. */
+		// Restore parent tag.
 		parserState->parentTag = "record";
-		/* Set data of control field. */
+		// Set data of control field.
 		parserState->fieldIt->setData(parserState->characterData);
 	} else if (strcmp(name, "datafield") == 0) {
-		/* Restore parent tag. */
+		// Restore parent tag.
 		parserState->parentTag = "record";
 	} else if (strcmp(name, "subfield") == 0) {
-		/* Restore parent tag. */
+		// Restore parent tag.
 		parserState->parentTag = "datafield";
-		/* Set data of subfield. */
+		// Set data of subfield.
 		parserState->subfieldIt->setData(parserState->characterData);
 	}
 }
@@ -312,10 +349,11 @@ void XMLCALL marcXmlEndElement(void *userData, const XML_Char *name)
 /*
  * XML character data handler for expat library.
  */
-void XMLCALL marcXmlCharacterData(void *userData, const XML_Char *s, int len)
+void XMLCALL
+marcXmlCharacterData(void *userData, const XML_Char *s, int len)
 {
-	struct MarcXmlReader::XmlParserState *parserState =
-		(struct MarcXmlReader::XmlParserState *) userData;
+	MarcXmlReader::XmlParserState *parserState =
+		(MarcXmlReader::XmlParserState *) userData;
 
 	parserState->characterData.append(s, len);
 }
@@ -323,35 +361,36 @@ void XMLCALL marcXmlCharacterData(void *userData, const XML_Char *s, int len)
 /*
  * XML unknown encoding handler for expat library.
  */
-int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Encoding *info)
+int XMLCALL
+marcXmlUnknownEncoding(void *data, const XML_Char *encoding,
+	XML_Encoding *info)
 {
 	(void) (data);
 	iconv_t iconvDesc = (iconv_t) -1;
 	unsigned char iconvBuf[8];
 
-	/* Initialize iconv. */
+	// Initialize iconv.
 	iconvDesc = iconv_open("UTF-16BE", encoding);
 	if (iconvDesc == (iconv_t) -1) {
 		return XML_STATUS_ERROR;
 	}
 
-	/* Generate conversion table for unknown encoding. */
+	// Generate conversion table for unknown encoding.
 	unsigned char i = 0;
 	do {
-#if defined(WIN32)
-		const char *src = (const char *) &i;
-#else
 		char *src = (char *) &i;
-#endif /* WIN32 */
 		char *dest = (char *) iconvBuf;
 		size_t srcLen = 1;
 		size_t destLen = sizeof(iconvBuf);
 
-		if (iconv(iconvDesc, &src, &srcLen, &dest, &destLen) == (size_t) -1) {
+		if (iconv(iconvDesc, &src, &srcLen, &dest, &destLen)
+			== (size_t) -1)
+		{
 			info->map[i] = -1;
 		} else {
 			int value = 0;
-			for (unsigned char *p = iconvBuf; (char *) p != dest; p++) {
+			unsigned char *p;
+			for (p = iconvBuf; (char *) p != dest; p++) {
 				value = (value << 8) + *p;
 			}
 
@@ -359,13 +398,15 @@ int XMLCALL marcXmlUnknownEncoding(void *data, const XML_Char *encoding, XML_Enc
 		}
 	} while (i++ < 255);
 
-	/* Finalize iconv. */
+	// Finalize iconv.
 	iconv_close(iconvDesc);
 
-	/* Initialize rest of encoding information. */
+	// Initialize rest of encoding information.
 	info->data = NULL;
 	info->convert = NULL;
 	info->release = NULL;
 
 	return XML_STATUS_OK;
 }
+
+} // namespace marcrecord
