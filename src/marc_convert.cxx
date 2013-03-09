@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Alexander Fronkin
+ * Copyright (c) 2013, Alexander Fronkin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,10 +40,10 @@
 
 using namespace marcrecord;
 
-/* Record format variants */
+// Record format variants.
 enum RecordFormat { FORMAT_NULL, FORMAT_ISO2709, FORMAT_MARCXML, FORMAT_TEXT };
 
-/* Application options structure. */
+// Application options structure.
 struct Options {
 	int verboseLevel;
 	bool permissiveRead;
@@ -57,9 +57,10 @@ struct Options {
 	const char *inputEncoding;
 	const char *outputEncoding;
 };
+typedef struct Options Options;
 
-/* Application options. */
-static struct Options options = {
+// Application options.
+static Options options = {
 	0, false, NULL, 0, 0, NULL, NULL,
 	FORMAT_ISO2709, FORMAT_TEXT, NULL, NULL };
 
@@ -72,7 +73,7 @@ bool convertFile(void)
 	int recNo = 0, numBadRecs = 0, numConvertedRecs = 0;
 
 	try {
-		/* Open input file. */
+		// Open input file.
 		if (options.inputFileName == NULL || strcmp(options.inputFileName, "-") == 0) {
 			inputFile = stdin;
 		} else {
@@ -82,7 +83,7 @@ bool convertFile(void)
 			}
 		}
 
-		/* Open output file. */
+		// Open output file.
 		if (options.outputFileName == NULL || strcmp(options.outputFileName, "-") == 0) {
 			outputFile = stdout;
 		} else {
@@ -92,7 +93,7 @@ bool convertFile(void)
 			}
 		}
 
-		/* Open input file in MarcReader or MarcXmlReader. */
+		// Open input file in MarcReader or MarcXmlReader.
 		MarcReader marcReader;
 		MarcXmlReader marcXmlReader;
 
@@ -109,7 +110,7 @@ bool convertFile(void)
 			throw std::string("wrong input format specified");
 		}
 
-		/* Open output file in MarcWriter, MarcTextWriter or MarcXmlWriter. */
+		// Open output file in MarcWriter, MarcTextWriter or MarcXmlWriter.
 		MarcWriter marcWriter;
 		MarcTextWriter marcTextWriter;
 		MarcXmlWriter marcXmlWriter;
@@ -129,16 +130,16 @@ bool convertFile(void)
 			throw std::string("wrong input format specified");
 		}
 
-		/* Get process start time. */
+		// Get process start time.
 		time_t startTime, curTime, prevTime;
 		time(&startTime);
 		prevTime = startTime;
 
-		/* Iterate records in input file. */
+		// Iterate records in input file.
 		for (recNo = 1; options.numRecs == 0 || numConvertedRecs < options.numRecs;
 			recNo++)
 		{
-			/* Read record from input file. */
+			// Read record from input file.
 			MarcRecord record;
 			bool readStatus;
 			bool exitFlag = false;
@@ -179,12 +180,12 @@ bool convertFile(void)
 				throw std::string("unknown input format");
 			}
 
-			/* Exit when flag is set (typically when end of file reached). */
+			// Exit when flag is set (typically when end of file reached).
 			if (exitFlag) {
 				break;
 			}
 
-			/* Write record to output file. */
+			// Write record to output file.
 			if (readStatus && recNo > options.skipRecs) {
 				numConvertedRecs++;
 				std::string textRecord, textRecordRecoded;
@@ -211,7 +212,7 @@ bool convertFile(void)
 				}
 			}
 
-			/* Print process status. */
+			// Print process status.
 			time(&curTime);
 			if (curTime > prevTime) {
 				if (options.verboseLevel > 1) {
@@ -223,12 +224,12 @@ bool convertFile(void)
 			}
 		}
 
-		/* Write MARCXML footer to output file. */
+		// Write MARCXML footer to output file.
 		if (options.outputFormat == FORMAT_MARCXML) {
 			marcXmlWriter.writeFooter();
 		}
 
-		/* Close files. */
+		// Close files.
 		if (inputFile != stdin) {
 			fclose(inputFile);
 			inputFile = NULL;
@@ -238,7 +239,7 @@ bool convertFile(void)
 			outputFile = NULL;
 		}
 
-		/* Print used time. */
+		// Print used time.
 		if (options.verboseLevel > 0) {
 			time(&curTime);
 			double usedTime = (double) (curTime - startTime);
@@ -256,13 +257,13 @@ bool convertFile(void)
 				usedHours, usedMinutes, usedSeconds);
 		}
 	} catch (std::string errorMessage) {
-		/* Print error message. */
+		// Print error message.
 		if (options.verboseLevel > 1) {
 			fputc('\r', stderr);
 		}
 		fprintf(stderr, "Error in record %d: %s.\n", recNo, errorMessage.c_str());
 
-		/* Close files. */
+		// Close files.
 		if (inputFile && inputFile != stdin) {
 			fclose(inputFile);
 		}
@@ -281,12 +282,12 @@ bool convertFile(void)
  */
 bool parseFormatString(const char *formatString, RecordFormat *format, const char **encoding)
 {
-	/* Check presence of format string. */
+	// Check presence of format string.
 	if (!formatString || strlen(formatString) == 0) {
 		return false;
 	}
 
-	/* Convert format name to format code. */
+	// Convert format name to format code.
 	const char *arg = formatString;
 	if (strlen(arg) == 0 || arg[0] == ',') {
 		*format = FORMAT_NULL;
@@ -300,7 +301,7 @@ bool parseFormatString(const char *formatString, RecordFormat *format, const cha
 		return false;
 	}
 
-	/* Get encoding. */
+	// Get encoding.
 	arg = strchr(formatString, ',');
 	if (arg != NULL) {
 		*encoding = arg + 1;
@@ -341,8 +342,10 @@ void print_help(void)
 		"\n",
 		NULL};
 
-	/* Printing help information this way due to theoretic
-	   limit of string length in c89-compliant compilers. */
+	/*
+	 * Printing help information this way due to theoretic
+	 * limit of string length in c89-compliant compilers.
+	 */
 	for (i = 0; help[i] != NULL; i++) {
 		fputs(help[i], stderr);
 	}
@@ -355,7 +358,7 @@ int main(int argc, char *argv[])
 {
 	const char *fromInfo = NULL, *toInfo = NULL;
 
-	/* Parse arguments. */
+	// Parse arguments.
 	for (int argNo = 1; argNo < argc; argNo++) {
 		if (argv[argNo][0] == '-' && argv[argNo][1] != '-') {
 			if (strchr(argv[argNo], 'h') != NULL) {
@@ -468,7 +471,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* Parse input format and encoding. */
+	// Parse input format and encoding.
 	if (fromInfo
 		&& !parseFormatString(fromInfo, &options.inputFormat, &options.inputEncoding))
 	{
@@ -479,7 +482,7 @@ int main(int argc, char *argv[])
 		options.inputFormat = FORMAT_ISO2709;
 	}
 	
-	/* Parse output format and encoding. */
+	// Parse output format and encoding.
 	if (toInfo
 		&& !parseFormatString(toInfo, &options.outputFormat, &options.outputEncoding))
 	{
@@ -490,7 +493,7 @@ int main(int argc, char *argv[])
 		options.outputFormat = FORMAT_TEXT;
 	}
 
-	/* Convert file. */
+	// Convert file.
 	if(!convertFile()) {
 		fprintf(stderr, "Operation failed.\n");
 		return 1;
