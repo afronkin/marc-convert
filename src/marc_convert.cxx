@@ -164,7 +164,7 @@ convertRecord(Counters &counters)
 /*
  * Convert records from MARC file.
  */
-bool
+static bool
 convertFile(void)
 {
 	FILE *inputFile = NULL, *outputFile = NULL;
@@ -315,7 +315,7 @@ convertFile(void)
 /*
  * Parse format string.
  */
-bool
+static bool
 parseFormatString(const char *formatString, RecordFormat *format,
 	const char **encoding)
 {
@@ -356,7 +356,7 @@ parseFormatString(const char *formatString, RecordFormat *format,
 /*
  * Print help information.
  */
-void
+static void
 print_help(void)
 {
 	int i;
@@ -400,7 +400,8 @@ print_help(void)
 /*
  * Main function.
  */
-int main(int argc, char *argv[])
+int
+main(int argc, char **argv)
 {
 	const char *fromInfo = NULL, *toInfo = NULL;
 
@@ -549,4 +550,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-
