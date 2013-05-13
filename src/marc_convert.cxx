@@ -201,11 +201,13 @@ convertFile(void)
 		switch (options.inputFormat) {
 		case FORMAT_ISO2709:
 			marcReader.open(inputFile, options.inputEncoding);
-			marcReader.setAutoCorrectionMode(true);
+			marcReader.setAutoCorrectionMode(
+				options.permissiveRead);
 			break;
 		case FORMAT_MARCXML:
 			marcXmlReader.open(inputFile, options.inputEncoding);
-			marcXmlReader.setAutoCorrectionMode(true);
+			marcXmlReader.setAutoCorrectionMode(
+				options.permissiveRead);
 			break;
 		default:
 			throw std::string("wrong input format specified");

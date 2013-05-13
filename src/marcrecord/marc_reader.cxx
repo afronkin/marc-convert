@@ -462,6 +462,17 @@ MarcReader::parseSubfield(const char *fieldData, unsigned int subfieldStartPos,
 		subfield.m_id = '?';
 	}
 
+	// Check subfield length.
+	if (subfieldEndPos - subfieldStartPos < 2) {
+		if (m_autoCorrectionMode) {
+			subfield.m_data = "?";
+			return subfield;
+		}
+		m_errorCode = ERROR_INVALID_RECORD;
+		m_errorMessage = "invalid subfield";
+		throw m_errorCode;
+	}
+
 	if (m_iconvDesc == (iconv_t) -1) {
 		// Copy subfield data.
 		subfield.m_data.assign(
