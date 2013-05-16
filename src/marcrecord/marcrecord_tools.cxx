@@ -26,10 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #include "marcrecord_tools.h"
 
 namespace marcrecord {
@@ -77,7 +77,11 @@ serialize_xml(std::string &s)
 			dest.append("&quot;");
 			break;
 		case '&':
-			dest.append("&amp;");
+			if ((it + 1) == s.end() || *(it + 1) != '#') {
+				dest.append("&amp;");
+			} else {
+				dest += c;
+			}
 			break;
 		case '\'':
 			dest.append("&apos;");
@@ -122,7 +126,11 @@ bool
 iconv(iconv_t iconv_desc, const std::string &src, std::string &dest)
 {
 	char buf[4096];
+#ifndef ICONV_CONST_CHAR
 	char *p = (char *) src.c_str();
+#else
+	const char *p = src.c_str();
+#endif
 	size_t src_len = src.size();
 
 	dest = "";
@@ -150,7 +158,11 @@ bool
 iconv(iconv_t iconv_desc, const char *src, size_t len, std::string &dest)
 {
 	char buf[4096];
+#ifndef ICONV_CONST_CHAR
 	char *p = (char *) src;
+#else
+	const char *p = src;
+#endif
 	size_t src_len = len;
 
 	dest = "";

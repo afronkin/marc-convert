@@ -26,10 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <errno.h>
 extern "C" {
 #include <getopt.h>
 }
