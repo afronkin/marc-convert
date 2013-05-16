@@ -1,6 +1,7 @@
 SRC_DIR=../src
 OBJS=marc_convert.o marc_reader.o marc_writer.o marcrecord.o marcrecord_field.o \
-  marcrecord_subfield.o marcrecord_tools.o marctext_writer.o marcxml_reader.o marcxml_writer.o
+  marcrecord_subfield.o marcrecord_tools.o marctext_writer.o marcxml_reader.o \
+  marcxml_writer.o  unimarcxml_writer.o
 PROGRAM=marc-convert
 
 CXX=g++

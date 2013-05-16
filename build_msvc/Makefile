@@ -8,7 +8,7 @@ OBJS_EXPAT=xmlparse.obj xmlrole.obj xmltok.obj
 OBJS_GETOPT=getopt_long.obj
 OBJS_MARCRECORD=marc_reader.obj marc_writer.obj marcrecord.obj marcrecord_field.obj \
   marcrecord_subfield.obj marcrecord_tools.obj marctext_writer.obj \
-  marcxml_reader.obj marcxml_writer.obj
+  marcxml_reader.obj marcxml_writer.obj unimarcxml_writer.obj
 OBJS_WIN_ICONV=win_iconv.obj
 OBJS=marc_convert.obj $(OBJS_EXPAT) $(OBJS_GETOPT) $(OBJS_MARCRECORD) $(OBJS_WIN_ICONV)
 
@@ -82,6 +82,9 @@ marcxml_reader.obj: $(SRC_DIR_MARCRECORD)\marcxml_reader.cxx
 	cl /c $(CXXFLAGS_MARCRECORD) $**
 
 marcxml_writer.obj: $(SRC_DIR_MARCRECORD)\marcxml_writer.cxx
+	cl /c $(CXXFLAGS_MARCRECORD) $**
+
+unimarcxml_writer.obj: $(SRC_DIR_MARCRECORD)\unimarcxml_writer.cxx
 	cl /c $(CXXFLAGS_MARCRECORD) $**
 
 win_iconv.obj: $(SRC_DIR_WIN_ICONV)\win_iconv.c

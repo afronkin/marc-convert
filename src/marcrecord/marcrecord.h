@@ -108,6 +108,8 @@ public:
 	friend class MarcXmlReader;
 	// MARCXML writer class.
 	friend class MarcXmlWriter;
+	// UNIMARCXML writer class.
+	friend class UnimarcXmlWriter;
 
 	// List of fields.
 	typedef std::list<Field> FieldList;

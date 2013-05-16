@@ -40,11 +40,14 @@ extern "C" {
 #include "marcrecord/marctext_writer.h"
 #include "marcrecord/marcxml_reader.h"
 #include "marcrecord/marcxml_writer.h"
+#include "marcrecord/unimarcxml_writer.h"
 
 using namespace marcrecord;
 
 // Record format variants.
-enum RecordFormat { FORMAT_NULL, FORMAT_ISO2709, FORMAT_MARCXML, FORMAT_TEXT };
+enum RecordFormat {
+	FORMAT_NULL, FORMAT_ISO2709, FORMAT_MARCXML, FORMAT_UNIMARCXML,
+	FORMAT_TEXT };
 
 // Application options structure.
 struct Options {
@@ -82,6 +85,7 @@ MarcXmlReader marcXmlReader;
 MarcWriter marcWriter;
 MarcTextWriter marcTextWriter;
 MarcXmlWriter marcXmlWriter;
+UnimarcXmlWriter unimarcXmlWriter;
 
 /*
  * Convert record (read it from input file and write to output file).
@@ -142,6 +146,9 @@ convertRecord(Counters &counters)
 			break;
 		case FORMAT_MARCXML:
 			marcXmlWriter.write(record);
+			break;
+		case FORMAT_UNIMARCXML:
+			unimarcXmlWriter.write(record);
 			break;
 		case FORMAT_TEXT:
 			char recordHeader[30];
@@ -222,6 +229,11 @@ convertFile(void)
 			marcXmlWriter.open(outputFile, options.outputEncoding);
 			marcXmlWriter.writeHeader();
 			break;
+		case FORMAT_UNIMARCXML:
+			unimarcXmlWriter.open(outputFile,
+				options.outputEncoding);
+			unimarcXmlWriter.writeHeader();
+			break;
 		case FORMAT_TEXT:
 			marcTextWriter.open(outputFile,
 				options.outputEncoding);
@@ -257,9 +269,12 @@ convertFile(void)
 			}
 		}
 
-		// Write MARCXML footer to output file.
 		if (options.outputFormat == FORMAT_MARCXML) {
+			// Write MARCXML footer to output file.
 			marcXmlWriter.writeFooter();
+		} else if (options.outputFormat == FORMAT_UNIMARCXML) {
+			// Write UNIMARCXML footer to output file.
+			unimarcXmlWriter.writeFooter();
 		}
 
 		// Close files.
@@ -332,6 +347,8 @@ parseRecordFormat(const char *formatName)
 		return FORMAT_ISO2709;
 	} else if (strcmp(formatName, "marcxml") == 0) {
 		return FORMAT_MARCXML;
+	} else if (strcmp(formatName, "unimarcxml") == 0) {
+		return FORMAT_UNIMARCXML;
 	} else if (strcmp(formatName, "text") == 0) {
 		return FORMAT_TEXT;
 	}
@@ -367,7 +384,7 @@ displayUsage(void)
 		"  -r --recode      encoding of output file\n",
 		"  -s --skiprecs    number of records to skip\n",
 		"  -t --to          format of output file\n",
-		"                   formats: iso2709, marcxml, text\n",
+		"                   (iso2709, marcxml, unimarcxml, text)\n",
 		"                   default format: text\n",
 		"  -v --verbose     increase verbosity level (repeatable)\n",
 		"  infile           name of input file ('-' for stdin)\n",
