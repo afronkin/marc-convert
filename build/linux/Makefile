@@ -52,35 +52,8 @@ verify:
 $(BIN_MARC_CONVERT): $(OBJS_MARC_CONVERT) $(OBJS_MARCRECORD)
 	$(LINK) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(OBJS_DIR_MARC_CONVERT)/marc_convert.o: $(SRC_DIR_MARC_CONVERT)/marc_convert.cxx
+$(OBJS_DIR_MARC_CONVERT)/%.o: $(SRC_DIR_MARC_CONVERT)/%.cxx
 	$(CXX) $(CXXFLAGS_MARC_CONVERT) -c -o $@ $<
 
-$(OBJS_DIR_MARCRECORD)/marc_reader.o: $(SRC_DIR_MARCRECORD)/marc_reader.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marc_writer.o: $(SRC_DIR_MARCRECORD)/marc_writer.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marcrecord.o: $(SRC_DIR_MARCRECORD)/marcrecord.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marcrecord_field.o: $(SRC_DIR_MARCRECORD)/marcrecord_field.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marcrecord_subfield.o: $(SRC_DIR_MARCRECORD)/marcrecord_subfield.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marcrecord_tools.o: $(SRC_DIR_MARCRECORD)/marcrecord_tools.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marctext_writer.o: $(SRC_DIR_MARCRECORD)/marctext_writer.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marcxml_reader.o: $(SRC_DIR_MARCRECORD)/marcxml_reader.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/marcxml_writer.o: $(SRC_DIR_MARCRECORD)/marcxml_writer.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
-
-$(OBJS_DIR_MARCRECORD)/unimarcxml_writer.o: $(SRC_DIR_MARCRECORD)/unimarcxml_writer.cxx
-	$(CXX) $(CXXFLAGS_MARCRECORD) -c -o $@ $<
+$(OBJS_DIR_MARCRECORD)/%.o: $(SRC_DIR_MARCRECORD)/%.cxx
+	$(CXX) $(CXXFLAGS_MARCRECORD) -c $< -o $@
