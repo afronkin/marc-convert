@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MARCRECORD_SRC_MARCRECORD_TOOLS_H
-#define MARCRECORD_SRC_MARCRECORD_TOOLS_H
+#ifndef MARCRECORD_MARCRECORD_TOOLS_H
+#define MARCRECORD_MARCRECORD_TOOLS_H
 
 #include <iconv.h>
 #include <string>
@@ -47,4 +47,4 @@ bool iconv(iconv_t iconv_desc, const char *src, size_t len, std::string &dest);
 
 } // namespace marcrecord
 
-#endif // MARCRECORD_SRC_MARCRECORD_TOOLS_H
+#endif // MARCRECORD_MARCRECORD_TOOLS_H

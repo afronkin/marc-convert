@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MARCRECORD_SRC_MARCRECORD_H
-#define MARCRECORD_SRC_MARCRECORD_H
+#ifndef MARCRECORD_MARCRECORD_H
+#define MARCRECORD_MARCRECORD_H
 
 #include <list>
 #include <string>
@@ -326,4 +326,4 @@ public:
 
 } // namespace marcrecord
 
-#endif // MARCRECORD_SRC_MARCRECORD_H
+#endif // MARCRECORD_MARCRECORD_H

@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MARCRECORD_SRC_MARC_WRITER_H
-#define MARCRECORD_SRC_MARC_WRITER_H
+#ifndef MARCRECORD_MARC_WRITER_H
+#define MARCRECORD_MARC_WRITER_H
 
 #include <iconv.h>
 #include <string>
@@ -90,4 +90,4 @@ public:
 
 } // namespace marcrecord
 
-#endif // MARCRECORD_SRC_MARC_WRITER_H
+#endif // MARCRECORD_MARC_WRITER_H
