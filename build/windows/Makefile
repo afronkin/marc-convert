@@ -1,4 +1,4 @@
-SRC_DIR=..\src
+SRC_DIR=..\..\src
 SRC_DIR_EXPAT=$(SRC_DIR)\expat
 SRC_DIR_GETOPT=$(SRC_DIR)\getopt
 SRC_DIR_MARCRECORD=$(SRC_DIR)\marcrecord
