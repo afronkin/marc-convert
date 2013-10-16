@@ -183,19 +183,8 @@ MarcReader::next(MarcRecord &record)
 	m_errorCode = OK;
 	m_errorMessage = "";
 
-	// Skip possible wrong symbols.
-	do {
-		symbol = fgetc(m_inputFile);
-	} while (symbol >= 0 && isdigit(symbol) == 0);
-
-	if (symbol < 0) {
-		m_errorCode = END_OF_FILE;
-		return false;
-	}
-
 	// Read record length.
-	recordBuf[0] = (char) symbol;
-	if (fread(recordBuf + 1, 1, 4, m_inputFile) != 4) {
+	if (fread(recordBuf, 1, 5, m_inputFile) != 5) {
 		m_errorCode = END_OF_FILE;
 		return false;
 	}
@@ -204,6 +193,11 @@ MarcReader::next(MarcRecord &record)
 	if (!is_numeric(recordBuf, 5)
 		|| sscanf(recordBuf, "%5u", &recordLen) != 1)
 	{
+		// Skip until record separator.
+		do {
+			symbol = fgetc(m_inputFile);
+		} while (symbol >= 0 && symbol != ISO2709_RECORD_SEPARATOR);
+
 		m_errorCode = ERROR_INVALID_RECORD;
 		m_errorMessage = "invalid record length";
 		return false;
@@ -213,6 +207,11 @@ MarcReader::next(MarcRecord &record)
 	if (fread(recordBuf + 5, 1, recordLen - 5, m_inputFile)
 		!= recordLen - 5)
 	{
+		// Skip until record separator.
+		do {
+			symbol = fgetc(m_inputFile);
+		} while (symbol >= 0 && symbol != ISO2709_RECORD_SEPARATOR);
+
 		m_errorCode = ERROR_INVALID_RECORD;
 		m_errorMessage =
 			"invalid record length or record data incomplete";
