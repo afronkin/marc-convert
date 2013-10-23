@@ -105,7 +105,7 @@ MarcRecord::Subfield::getEmbeddedTag(void)
 		return "";
 	}
 
-	return m_data.substr(0, 3);
+	return m_data.size() >= 3 ? m_data.substr(0, 3) : m_data;
 }
 
 /*
@@ -114,7 +114,7 @@ MarcRecord::Subfield::getEmbeddedTag(void)
 char
 MarcRecord::Subfield::getEmbeddedInd1(void)
 {
-	if (m_id != '1' || m_data.substr(0, 3) < "010") {
+	if (m_id != '1' || m_data.size() < 4 || m_data.substr(0, 3) < "010") {
 		return '?';
 	}
 
@@ -127,7 +127,7 @@ MarcRecord::Subfield::getEmbeddedInd1(void)
 char
 MarcRecord::Subfield::getEmbeddedInd2(void)
 {
-	if (m_id != '1' || m_data.substr(0, 3) < "010") {
+	if (m_id != '1' || m_data.size() < 5 || m_data.substr(0, 3) < "010") {
 		return '?';
 	}
 
@@ -140,7 +140,7 @@ MarcRecord::Subfield::getEmbeddedInd2(void)
 std::string
 MarcRecord::Subfield::getEmbeddedData(void)
 {
-	if (m_id != '1' || m_data.substr(0, 3) >= "010") {
+	if (m_id != '1' || m_data.size() < 3 || m_data.substr(0, 3) >= "010") {
 		return "";
 	}
 
