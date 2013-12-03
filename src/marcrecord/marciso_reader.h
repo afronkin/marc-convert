@@ -47,7 +47,8 @@ protected:
 private:
 	// Parse field from ISO 2709 buffer.
 	inline MarcRecord::Field parseField(const std::string &fieldTag,
-		const char *fieldData, unsigned int fieldLength);
+		const char *fieldData, unsigned int fieldLength,
+		unsigned int fieldAbsoluteStartPos);
 	// Parse subfield.
 	MarcRecord::Subfield parseSubfield(const char *fieldData,
 		unsigned int subfieldStartPos, unsigned int subfieldEndPos);

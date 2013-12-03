@@ -275,8 +275,13 @@ MarcIsoReader::parse(const char *recordBuf, unsigned int recordBufLen,
 			if (!is_numeric((const char *) directoryEntry,
 				sizeof(RecordDirectoryEntry)))
 			{
+				std::string errorPos;
+				snprintf(errorPos, 11, "%d",
+					(char *) directoryEntry - recordBuf);
+
 				m_errorCode = ERROR_INVALID_RECORD;
-				m_errorMessage = "invalid directory entry";
+				m_errorMessage = "invalid directory entry at "
+					+ errorPos;
 				throw m_errorCode;
 			}
 
@@ -286,25 +291,52 @@ MarcIsoReader::parse(const char *recordBuf, unsigned int recordBufLen,
 			if (sscanf(directoryEntry->fieldLength, "%4u%5u",
 				&fieldLength, &fieldStartPos) != 2)
 			{
+				std::string errorPos;
+				snprintf(errorPos, 11, "%d",
+					(char *) directoryEntry->fieldLength
+					- recordBuf);
+
 				m_errorCode = ERROR_INVALID_RECORD;
-				m_errorMessage =
-					"invalid base address of data";
+				m_errorMessage = 
+					"invalid base address of data at "
+					+ errorPos;
 				throw m_errorCode;
 			}
 
 			// Check field starting position and length.
-			if (baseAddress + fieldStartPos + fieldLength
-				> recordLen)
+			unsigned int fieldEndPos =
+			       baseAddress + fieldStartPos + fieldLength;
+			if (fieldEndPos > recordLen
+				|| (fieldTag < "010" && fieldLength < 2))
 			{
+				std::string errorPos;
+				snprintf(errorPos, 11, "%d",
+					(char *) directoryEntry->fieldLength
+					- recordBuf);
+
 				m_errorCode = ERROR_INVALID_RECORD;
 				m_errorMessage = "invalid field starting "
-					"position or length";
+					"position or length at " + errorPos;
+				throw m_errorCode;
+			}
+
+			// Check data field length.
+			if (fieldTag < "010" && fieldLength < 2) {
+				std::string errorPos;
+				snprintf(errorPos, 11, "%d",
+					(char *) directoryEntry->fieldLength
+					- recordBuf);
+
+				m_errorCode = ERROR_INVALID_RECORD;
+				m_errorMessage = "invalid length of data field"
+					" at " + errorPos;
 				throw m_errorCode;
 			}
 
 			// Parse field.
 			MarcRecord::Field field = parseField(fieldTag,
-				recordData + fieldStartPos, fieldLength);
+				recordData + fieldStartPos, fieldLength,
+				baseAddress + fieldStartPos);
 			// Append field to list.
 			record.m_fieldList.push_back(field);
 		}
@@ -320,8 +352,8 @@ MarcIsoReader::parse(const char *recordBuf, unsigned int recordBufLen,
  * Parse field from ISO 2709 buffer.
  */
 MarcRecord::Field
-MarcIsoReader::parseField(const std::string &fieldTag,
-	const char *fieldData, unsigned int fieldLength)
+MarcIsoReader::parseField(const std::string &fieldTag, const char *fieldData,
+	unsigned int fieldLength, unsigned int fieldAbsoluteStartPos)
 {
 	MarcRecord::Field field;
 
@@ -344,7 +376,7 @@ MarcIsoReader::parseField(const std::string &fieldTag,
 		}
 	}
 
-	if (fieldTag < "010" || fieldLength < 2) {
+	if (fieldTag < "010") {
 		// Parse control field.
 		field.m_type = MarcRecord::Field::CONTROLFIELD;
 		if (m_iconvDesc == (iconv_t) -1) {
@@ -353,19 +385,17 @@ MarcIsoReader::parseField(const std::string &fieldTag,
 			if (!iconv(m_iconvDesc, fieldData, fieldLength,
 				field.m_data))
 			{
+				std::string errorPos;
+				snprintf(errorPos, 11, "%d",
+					fieldAbsoluteStartPos);
+
 				m_errorCode = ERROR_ICONV;
-				m_errorMessage = "encoding conversion failed";
+				m_errorMessage = "encoding conversion failed "
+					"at " + errorPos;
 				throw m_errorCode;
 			}
 		}
 	} else {
-		// Check field length.
-		if (fieldLength < 2) {
-			m_errorCode = ERROR_INVALID_RECORD;
-			m_errorMessage = "invalid length of data field";
-			throw m_errorCode;
-		}
-
 		// Parse data field.
 		field.m_type = MarcRecord::Field::DATAFIELD;
 		field.m_ind1 = fieldData[0];
