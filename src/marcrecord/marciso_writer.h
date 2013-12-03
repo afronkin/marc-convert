@@ -26,47 +26,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cerrno>
-#include <cstdio>
-#include <cstring>
-#include "marcrecord.h"
-#include "marcrecord_tools.h"
+#ifndef MARCRECORD_MARCISO_WRITER_H
+#define MARCRECORD_MARCISO_WRITER_H
+
+#include <iconv.h>
+#include <string>
 #include "marc_writer.h"
+#include "marcrecord.h"
 
-using namespace marcrecord;
-
-/*
- * Constructor.
- */
-MarcWriter::MarcWriter()
-{
-	// Clear member variables.
-	m_errorCode = OK;
-}
+namespace marcrecord {
 
 /*
- * Get last error code.
+ *ISO 2709 records writer.
  */
-MarcWriter::ErrorCode
-MarcWriter::getErrorCode(void)
-{
-	return m_errorCode;
-}
+class MarcIsoWriter : public MarcWriter {
+protected:
+	// Iconv descriptor for output encoding.
+	iconv_t m_iconvDesc;
 
-/*
- * Get last error message.
- */
-std::string &
-MarcWriter::getErrorMessage(void)
-{
-	return m_errorMessage;
-}
+private:
+	// Append control field data to the write buffer.
+	int appendControlField(char *fieldData, MarcRecord::FieldIt &fieldIt);
+	// Append subfield data to the write buffer.
+	int appendSubfield(char *fieldData,
+		MarcRecord::SubfieldIt &subfieldIt);
 
-/*
- * Return output file handle.
- */
-FILE *
-MarcWriter::getOutputFile()
-{
-	return m_outputFile;
-}
+public:
+	// Constructor.
+	MarcIsoWriter(FILE *outputFile = NULL,
+		const char *outputEncoding = NULL);
+	// Destructor.
+	~MarcIsoWriter();
+
+	// Open output file.
+	bool open(FILE *outputFile, const char *outputEncoding = NULL);
+	// Close output file.
+	void close(void);
+	// Write record to output file.
+	bool write(MarcRecord &record);
+};
+
+} // namespace marcrecord
+
+#endif // MARCRECORD_MARCISO_WRITER_H

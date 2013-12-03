@@ -31,6 +31,7 @@
 
 #include <expat.h>
 #include <string>
+#include "marc_reader.h"
 #include "marcrecord.h"
 
 namespace marcrecord {
@@ -38,7 +39,7 @@ namespace marcrecord {
 /*
  * MARCXML records reader.
  */
-class MarcXmlReader {
+class MarcXmlReader : public MarcReader {
 public:
 	// XML parser state structure definition.
 	struct XmlParserState {
@@ -54,27 +55,7 @@ public:
 	};
 	typedef struct XmlParserState XmlParserState;
 
-	// Error codes.
-	enum ErrorCode {
-		OK = 0,
-		END_OF_FILE = 1,
-		ERROR_XML_PARSER = -1
-	};
-
 protected:
-	// Code of last error.
-	ErrorCode m_errorCode;
-	// Message of last error.
-	std::string m_errorMessage;
-
-	// Input MARCXML file.
-	FILE *m_inputFile;
-	// Encoding of input MARCXML file.
-	std::string m_inputEncoding;
-
-	// Automatic error correction mode.
-	bool m_autoCorrectionMode;
-
 	// XML parser.
 	XML_Parser m_xmlParser;
 	// XML parser state.
@@ -89,20 +70,11 @@ public:
 	// Destructor.
 	~MarcXmlReader();
 
-	// Get last error code.
-	ErrorCode getErrorCode(void);
-	// Get last error message.
-	std::string & getErrorMessage(void);
-
-	// Set automatic error correction mode.
-	void setAutoCorrectionMode(bool autoCorrectionMode = true);
-
 	// Open input file and initialize parser.
-	void open(FILE *inputFile, const char *inputEncoding = NULL);
+	bool open(FILE *inputFile, const char *inputEncoding = NULL);
 	// Close input file and finalize parser.
 	void close(void);
-
-	// Read next record from MARCXML file.
+	// Read next record from file.
 	bool next(MarcRecord &record);
 };
 

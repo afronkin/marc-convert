@@ -57,10 +57,8 @@ using namespace marcrecord;
  * Constructor.
  */
 MarcXmlReader::MarcXmlReader(FILE *inputFile, const char *inputEncoding)
+	: MarcReader()
 {
-	// Clear member variables.
-	m_autoCorrectionMode = false;
-
 	if (inputFile) {
 		// Open input file and initialize parser.
 		open(inputFile, inputEncoding);
@@ -81,36 +79,9 @@ MarcXmlReader::~MarcXmlReader()
 }
 
 /*
- * Get last error code.
- */
-MarcXmlReader::ErrorCode
-MarcXmlReader::getErrorCode(void)
-{
-	return m_errorCode;
-}
-
-/*
- * Get last error message.
- */
-std::string &
-MarcXmlReader::getErrorMessage(void)
-{
-	return m_errorMessage;
-}
-
-/*
- * Set automatic error correction mode.
- */
-void
-MarcXmlReader::setAutoCorrectionMode(bool autoCorrectionMode)
-{
-	m_autoCorrectionMode = autoCorrectionMode;
-}
-
-/*
  * Open input file and initialize parser.
  */
-void
+bool
 MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
 {
 	// Clear error code and message.
@@ -137,6 +108,8 @@ MarcXmlReader::open(FILE *inputFile, const char *inputEncoding)
 	m_parserState.parentTag = "";
 	m_parserState.record = NULL;
 	m_parserState.characterData.erase();
+
+	return true;
 }
 
 /*

@@ -40,6 +40,7 @@ using namespace marcrecord;
  */
 UnimarcXmlWriter::UnimarcXmlWriter(FILE *outputFile,
 	const char *outputEncoding)
+	: MarcWriter()
 {
 	// Clear member variables.
 	m_iconvDesc = (iconv_t) -1;
@@ -60,24 +61,6 @@ UnimarcXmlWriter::~UnimarcXmlWriter()
 {
 	// Close output file.
 	close();
-}
-
-/*
- * Get last error code.
- */
-UnimarcXmlWriter::ErrorCode
-UnimarcXmlWriter::getErrorCode(void)
-{
-	return m_errorCode;
-}
-
-/*
- * Get last error message.
- */
-std::string &
-UnimarcXmlWriter::getErrorMessage(void)
-{
-	return m_errorMessage;
 }
 
 /*
@@ -138,92 +121,7 @@ UnimarcXmlWriter::close(void)
 }
 
 /*
- * Write header to UNIMARCXML file.
- */
-bool
-UnimarcXmlWriter::writeHeader(void)
-{
-	std::string header = "";
-
-	// Create UNIMARCXML header.
-	if (m_outputEncoding != "") {
-		header += "<?xml version=\"1.0\" encoding=\""
-			+ m_outputEncoding + "\"?>\n";
-	} else {
-		header = "<?xml version=\"1.0\"?>\n";
-	}
-
-	header += "<collection xmlns="
-		"\"http://www.rusmarc.ru/shema/UNISlim.xsd\">\n";
-
-	if (m_iconvDesc == (iconv_t) -1) {
-		// Write UNIMARCXML header.
-		if (fwrite(header.c_str(), header.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	} else {
-		// Write UNIMARCXML header with encoding conversion.
-		std::string iconvBuf;
-		if (!iconv(m_iconvDesc, header, iconvBuf)) {
-			m_errorCode = ERROR_ICONV;
-			m_errorMessage = "encoding conversion failed";
-			return false;
-		}
-		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/*
- * Write footer to UNIMARCXML file.
- */
-bool
-UnimarcXmlWriter::writeFooter(void)
-{
-	std::string footer = "</collection>\n";
-
-	if (m_iconvDesc == (iconv_t) -1) {
-		// Write UNIMARCXML footer.
-		if (fwrite(footer.c_str(), footer.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	} else {
-		// Write UNIMARCXML footer with encoding conversion.
-		std::string iconvBuf;
-		if (!iconv(m_iconvDesc, footer, iconvBuf)) {
-			m_errorCode = ERROR_ICONV;
-			m_errorMessage = "encoding conversion failed";
-			return false;
-		}
-		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/*
- * Write record to UNIMARCXML file.
+ * Write record to output file.
  */
 bool
 UnimarcXmlWriter::write(MarcRecord &record)
@@ -290,6 +188,91 @@ UnimarcXmlWriter::write(MarcRecord &record)
 }
 
 /*
+ * Write header to output file.
+ */
+bool
+UnimarcXmlWriter::writeHeader(void)
+{
+	std::string header = "";
+
+	// Create UNIMARCXML header.
+	if (m_outputEncoding != "") {
+		header += "<?xml version=\"1.0\" encoding=\""
+			+ m_outputEncoding + "\"?>\n";
+	} else {
+		header = "<?xml version=\"1.0\"?>\n";
+	}
+
+	header += "<collection xmlns="
+		"\"http://www.rusmarc.ru/shema/UNISlim.xsd\">\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		// Write UNIMARCXML header.
+		if (fwrite(header.c_str(), header.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		// Write UNIMARCXML header with encoding conversion.
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, header, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * Write footer to output file.
+ */
+bool
+UnimarcXmlWriter::writeFooter(void)
+{
+	std::string footer = "</collection>\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		// Write UNIMARCXML footer.
+		if (fwrite(footer.c_str(), footer.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		// Write UNIMARCXML footer with encoding conversion.
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, footer, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/*
  * Append data field to UNIMARCXML file to record buffer.
  */
 void
@@ -303,15 +286,15 @@ UnimarcXmlWriter::appendDataField(std::string &recordBuf,
 
 	// Iterate all subfields.
 	MarcRecord::SubfieldIt subfieldIt = fieldIt->m_subfieldList.begin();
-	bool isEmbeddedField = false;
+	bool isEmbeddedDataField = false;
 	for (; subfieldIt != fieldIt->m_subfieldList.end();
 		subfieldIt++)
 	{
 		std::string xmlData;
 
 		if (subfieldIt->isEmbedded()) {
-			if (isEmbeddedField) {
-				// Append embedded field footer.
+			if (isEmbeddedDataField) {
+				// Append embedded data field footer.
 				recordBuf = recordBuf
 					+ "        </datafield>\n"
 					+ "      </s1>\n";
@@ -330,8 +313,8 @@ UnimarcXmlWriter::appendDataField(std::string &recordBuf,
 					+ embeddedTag + "\">"
 					+ xmlData + "</controlfield>\n"
 					+ "      </s1>\n";
+				isEmbeddedDataField = false;
 			} else {
-				isEmbeddedField = true;
 				recordBuf = recordBuf
 					+ "      <s1>\n"
 					+ "        <datafield tag=\""
@@ -341,12 +324,13 @@ UnimarcXmlWriter::appendDataField(std::string &recordBuf,
 					+ "\" ind2=\""
 					+ subfieldIt->getEmbeddedInd2()
 					+ "\">\n";
+				isEmbeddedDataField = true;
 			}
 			continue;
 		}
 
 		// Append indent for embedded field.
-		if (isEmbeddedField) {
+		if (isEmbeddedDataField) {
 			recordBuf += "    ";
 		}
 
@@ -358,8 +342,8 @@ UnimarcXmlWriter::appendDataField(std::string &recordBuf,
 			+ xmlData + "</subfield>\n";
 	}
 
-	// Append embedded field footer.
-	if (isEmbeddedField) {
+	// Append embedded data field footer.
+	if (isEmbeddedDataField) {
 		recordBuf = recordBuf
 			+ "        </datafield>\n"
 			+ "      </s1>\n";

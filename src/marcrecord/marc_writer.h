@@ -29,14 +29,13 @@
 #ifndef MARCRECORD_MARC_WRITER_H
 #define MARCRECORD_MARC_WRITER_H
 
-#include <iconv.h>
 #include <string>
 #include "marcrecord.h"
 
 namespace marcrecord {
 
 /*
- * MARC (ISO 2709) records writer.
+ * MARC records writer.
  */
 class MarcWriter {
 public:
@@ -54,38 +53,30 @@ protected:
 	// Message of last error.
 	std::string m_errorMessage;
 
-	// Output ISO 2709 file.
+	// Output file.
 	FILE *m_outputFile;
-	// Encoding of output ISO 2709 file.
+	// Encoding of output file.
 	std::string m_outputEncoding;
-	// Iconv descriptor for output encoding.
-	iconv_t m_iconvDesc;
-
-private:
-	// Append control field data to the write buffer.
-	int appendControlField(char *fieldData, MarcRecord::FieldIt &fieldIt);
-	// Append subfield data to the write buffer.
-	int appendSubfield(char *fieldData,
-		MarcRecord::SubfieldIt &subfieldIt);
 
 public:
 	// Constructor.
-	MarcWriter(FILE *outputFile = NULL, const char *outputEncoding = NULL);
-	// Destructor.
-	~MarcWriter();
+	MarcWriter();
 
 	// Get last error code.
 	ErrorCode getErrorCode(void);
 	// Get last error message.
 	std::string & getErrorMessage(void);
 
-	// Open output file.
-	bool open(FILE *outputFile, const char *outputEncoding = NULL);
-	// Close output file.
-	void close(void);
+	// Return output file handle.
+	FILE *getOutputFile();
 
-	// Write record to ISO 2709 file.
-	bool write(MarcRecord &record);
+	// Open output file.
+	virtual bool open(FILE *outputFile,
+		const char *outputEncoding = NULL) = 0;
+	// Close output file.
+	virtual void close(void) = 0;
+	// Write record to output file.
+	virtual bool write(MarcRecord &record) = 0;
 };
 
 } // namespace marcrecord

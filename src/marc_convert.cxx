@@ -35,8 +35,8 @@ extern "C" {
 }
 #include <math.h>
 #include "marcrecord/marcrecord.h"
-#include "marcrecord/marc_reader.h"
-#include "marcrecord/marc_writer.h"
+#include "marcrecord/marciso_reader.h"
+#include "marcrecord/marciso_writer.h"
 #include "marcrecord/marctext_writer.h"
 #include "marcrecord/marcxml_reader.h"
 #include "marcrecord/marcxml_writer.h"
@@ -78,11 +78,11 @@ static Options options = {
 	FORMAT_ISO2709, FORMAT_TEXT, NULL, NULL };
 
 // Records readers.
-MarcReader marcReader;
+MarcIsoReader marcIsoReader;
 MarcXmlReader marcXmlReader;
 
 // Records writers.
-MarcWriter marcWriter;
+MarcIsoWriter marcIsoWriter;
 MarcTextWriter marcTextWriter;
 MarcXmlWriter marcXmlWriter;
 UnimarcXmlWriter unimarcXmlWriter;
@@ -100,12 +100,12 @@ convertRecord(Counters &counters)
 
 	switch (options.inputFormat) {
 	case FORMAT_ISO2709:
-		readStatus = marcReader.next(record);
+		readStatus = marcIsoReader.next(record);
 		if (readStatus) {
 			break;
 		}
 
-		switch (marcReader.getErrorCode()) {
+		switch (marcIsoReader.getErrorCode()) {
 		case MarcReader::END_OF_FILE:
 			return false;
 		case MarcReader::ERROR_INVALID_RECORD:
@@ -113,9 +113,9 @@ convertRecord(Counters &counters)
 				counters.numBadRecs++;
 				break;
 			}
-			throw marcReader.getErrorMessage();
+			throw marcIsoReader.getErrorMessage();
 		default:
-			throw marcReader.getErrorMessage();
+			throw marcIsoReader.getErrorMessage();
 		}
 		break;
 	case FORMAT_MARCXML:
@@ -142,7 +142,7 @@ convertRecord(Counters &counters)
 
 		switch (options.outputFormat) {
 		case FORMAT_ISO2709:
-			marcWriter.write(record);
+			marcIsoWriter.write(record);
 			break;
 		case FORMAT_MARCXML:
 			marcXmlWriter.write(record);
@@ -160,7 +160,8 @@ convertRecord(Counters &counters)
 					counters.recNo);
 			}
 
-			marcTextWriter.write(record, recordHeader, "\n");
+			marcTextWriter.setRecordHeader(recordHeader);
+			marcTextWriter.write(record);
 			break;
 		default:
 			throw std::string("unknown output format");
@@ -207,8 +208,8 @@ convertFile(void)
 		// Open input file in MarcReader or MarcXmlReader.
 		switch (options.inputFormat) {
 		case FORMAT_ISO2709:
-			marcReader.open(inputFile, options.inputEncoding);
-			marcReader.setAutoCorrectionMode(
+			marcIsoReader.open(inputFile, options.inputEncoding);
+			marcIsoReader.setAutoCorrectionMode(
 				options.permissiveRead);
 			break;
 		case FORMAT_MARCXML:
@@ -223,7 +224,7 @@ convertFile(void)
 		// Open output file in *Writer.
 		switch (options.outputFormat) {
 		case FORMAT_ISO2709:
-			marcWriter.open(outputFile, options.outputEncoding);
+			marcIsoWriter.open(outputFile, options.outputEncoding);
 			break;
 		case FORMAT_MARCXML:
 			marcXmlWriter.open(outputFile, options.outputEncoding);
@@ -237,6 +238,7 @@ convertFile(void)
 		case FORMAT_TEXT:
 			marcTextWriter.open(outputFile,
 				options.outputEncoding);
+			marcTextWriter.setRecordFooter("\n");
 			break;
 		default:
 			throw std::string("wrong input format specified");

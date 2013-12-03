@@ -11,6 +11,8 @@ OBJS_MARC_CONVERT=\
 OBJS_MARCRECORD=\
   $(OBJS_DIR_MARCRECORD)/marc_reader.o \
   $(OBJS_DIR_MARCRECORD)/marc_writer.o \
+  $(OBJS_DIR_MARCRECORD)/marciso_reader.o \
+  $(OBJS_DIR_MARCRECORD)/marciso_writer.o \
   $(OBJS_DIR_MARCRECORD)/marcrecord.o \
   $(OBJS_DIR_MARCRECORD)/marcrecord_field.o \
   $(OBJS_DIR_MARCRECORD)/marcrecord_subfield.o \
@@ -32,7 +34,7 @@ LINK=g++
 LDFLAGS=
 LIBS=-lm -lexpat -liconv
 
-.PHONY: all clean depend verify
+.PHONY: all clean verify
 .SUFFIXES: .cxx .c .o
 
 all: depend $(BIN_MARC_CONVERT)
@@ -48,6 +50,21 @@ verify:
 	./$(BIN_MARC_CONVERT) -vv -f iso2709 -t marcxml -e cp1251 -r utf-8 -o test2.xml ../../share/test/rusmarc.iso
 	./$(BIN_MARC_CONVERT) -vv -f marcxml -t text -r cp1251 -o test3.txt test2.xml
 	./$(BIN_MARC_CONVERT) -vv -f iso2709 -t marcxml -e windows-1251 -o test4.xml ../../share/test/rusmarc.iso
+
+$(BIN_MARC_CONVERT): | $(BIN_DIR)
+
+$(BIN_DIR):
+	mkdir -p $@
+
+$(OBJS_MARC_CONVERT): | $(OBJS_DIR_MARC_CONVERT)
+
+$(OBJS_DIR_MARC_CONVERT):
+	mkdir -p $@
+
+$(OBJS_MARCRECORD): | $(OBJS_DIR_MARCRECORD)
+
+$(OBJS_DIR_MARCRECORD):
+	mkdir -p $@
 
 $(BIN_MARC_CONVERT): $(OBJS_MARC_CONVERT) $(OBJS_MARCRECORD)
 	$(LINK) $(LDFLAGS) -o $@ $^ $(LIBS)

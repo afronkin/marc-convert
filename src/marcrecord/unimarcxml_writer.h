@@ -31,6 +31,7 @@
 
 #include <iconv.h>
 #include <string>
+#include "marc_writer.h"
 #include "marcrecord.h"
 
 namespace marcrecord {
@@ -38,30 +39,13 @@ namespace marcrecord {
 /*
  * UNIMARCXML records writer.
  */
-class UnimarcXmlWriter {
-public:
-	// Error codes.
-	enum ErrorCode {
-		OK = 0,
-		ERROR_ICONV = -1,
-		ERROR_IO = -2
-	};
-
+class UnimarcXmlWriter : public MarcWriter {
 private:
 	// Append data field to UNIMARCXML file to record buffer.
 	void appendDataField(std::string &recordBuf,
 		MarcRecord::FieldIt &fieldIt);
 
 protected:
-	// Code of last error.
-	ErrorCode m_errorCode;
-	// Message of last error.
-	std::string m_errorMessage;
-
-	// Output UNIMARCXML file.
-	FILE *m_outputFile;
-	// Encoding of output UNIMARCXML file.
-	std::string m_outputEncoding;
 	// Iconv descriptor for output encoding.
 	iconv_t m_iconvDesc;
 
@@ -81,13 +65,13 @@ public:
 	bool open(FILE *outputFile, const char *outputEncoding = NULL);
 	// Close output file.
 	void close(void);
-
-	// Write header to MARCXML file.
-	bool writeHeader(void);
-	// Write footer to MARCXML file.
-	bool writeFooter(void);
-	// Write record to MARCXML file.
+	// Write record to output file.
 	bool write(MarcRecord &record);
+
+	// Write header to output file.
+	bool writeHeader(void);
+	// Write footer to output file.
+	bool writeFooter(void);
 };
 
 } // namespace marcrecord

@@ -31,6 +31,7 @@
 
 #include <iconv.h>
 #include <string>
+#include "marc_writer.h"
 #include "marcrecord.h"
 
 namespace marcrecord {
@@ -38,27 +39,15 @@ namespace marcrecord {
 /*
  * MARC text records writer.
  */
-class MarcTextWriter {
-public:
-	// Error codes.
-	enum ErrorCode {
-		OK = 0,
-		ERROR_ICONV = -1,
-		ERROR_IO = -2
-	};
-
+class MarcTextWriter : public MarcWriter {
 protected:
-	// Code of last error.
-	ErrorCode m_errorCode;
-	// Message of last error.
-	std::string m_errorMessage;
-
-	// Output MARC text file.
-	FILE *m_outputFile;
-	// Encoding of output MARC text file.
-	std::string m_outputEncoding;
 	// Iconv descriptor for output encoding.
 	iconv_t m_iconvDesc;
+
+	// Record header.
+	std::string m_recordHeader;
+	// Record footer.
+	std::string m_recordFooter;
 
 public:
 	// Constructor.
@@ -67,18 +56,17 @@ public:
 	// Destructor.
 	~MarcTextWriter();
 
-	// Get last error code.
-	ErrorCode getErrorCode(void);
-	// Get last error message.
-	std::string & getErrorMessage(void);
+	// Set record header.
+	void setRecordHeader(std::string recordHeader);
+	// Set record footer.
+	void setRecordFooter(std::string recordFooter);
 
 	// Open output file.
 	bool open(FILE *outputFile, const char *outputEncoding = NULL);
 	// Close output file.
 	void close(void);
-
-	// Write record to MARC text file.
-	bool write(MarcRecord &record, const char *header, const char *footer);
+	// Write record to output file.
+	bool write(MarcRecord &record);
 };
 
 } // namespace marcrecord

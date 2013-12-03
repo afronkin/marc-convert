@@ -26,47 +26,51 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cerrno>
-#include <cstdio>
-#include <cstring>
+#ifndef MARCRECORD_MARCISO_READER_H
+#define MARCRECORD_MARCISO_READER_H
+
+#include <iconv.h>
+#include <string>
+#include "marc_reader.h"
 #include "marcrecord.h"
-#include "marcrecord_tools.h"
-#include "marc_writer.h"
 
-using namespace marcrecord;
+namespace marcrecord {
 
 /*
- * Constructor.
+ * ISO 2709 records reader.
  */
-MarcWriter::MarcWriter()
-{
-	// Clear member variables.
-	m_errorCode = OK;
-}
+class MarcIsoReader : public MarcReader {
+protected:
+	// Iconv descriptor for input encoding.
+	iconv_t m_iconvDesc;
 
-/*
- * Get last error code.
- */
-MarcWriter::ErrorCode
-MarcWriter::getErrorCode(void)
-{
-	return m_errorCode;
-}
+private:
+	// Parse field from ISO 2709 buffer.
+	inline MarcRecord::Field parseField(const std::string &fieldTag,
+		const char *fieldData, unsigned int fieldLength);
+	// Parse subfield.
+	MarcRecord::Subfield parseSubfield(const char *fieldData,
+		unsigned int subfieldStartPos, unsigned int subfieldEndPos);
 
-/*
- * Get last error message.
- */
-std::string &
-MarcWriter::getErrorMessage(void)
-{
-	return m_errorMessage;
-}
+public:
+	// Constructor.
+	MarcIsoReader(FILE *inputFile = NULL,
+		const char *inputEncoding = NULL);
+	// Destructor.
+	~MarcIsoReader();
 
-/*
- * Return output file handle.
- */
-FILE *
-MarcWriter::getOutputFile()
-{
-	return m_outputFile;
-}
+	// Open input file.
+	bool open(FILE *inputFile, const char *inputEncoding = NULL);
+	// Close input file.
+	void close(void);
+	// Read next record from file.
+	bool next(MarcRecord &record);
+
+	// Parse record from ISO 2709 buffer.
+	bool parse(const char *recordBuf, unsigned int recordBufLen,
+		MarcRecord &record);
+};
+
+} // namespace marcrecord
+
+#endif // MARCRECORD_MARCISO_READER_H

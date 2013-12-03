@@ -100,10 +100,14 @@ public:
 	// MARC subfield class.
 	class Subfield;
 
-	// MARC (ISO 2709) reader class.
+	// MARC reader class.
 	friend class MarcReader;
-	// MARC (ISO 2709) writer class.
+	// MARC writer class.
 	friend class MarcWriter;
+	// ISO 2709 reader class.
+	friend class MarcIsoReader;
+	// ISO 2709 writer class.
+	friend class MarcIsoWriter;
 	// MARCXML reader class.
 	friend class MarcXmlReader;
 	// MARCXML writer class.

@@ -29,6 +29,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include "marc_writer.h"
 #include "marcrecord.h"
 #include "marcrecord_tools.h"
 #include "marctext_writer.h"
@@ -39,9 +40,12 @@ using namespace marcrecord;
  * Constructor.
  */
 MarcTextWriter::MarcTextWriter(FILE *outputFile, const char *outputEncoding)
+	: MarcWriter()
 {
 	// Clear member variables.
 	m_iconvDesc = (iconv_t) -1;
+	m_recordHeader = "";
+	m_recordFooter = "";
 
 	if (outputFile) {
 		// Open output file.
@@ -62,21 +66,21 @@ MarcTextWriter::~MarcTextWriter()
 }
 
 /*
- * Get last error code.
+ * Set record header.
  */
-MarcTextWriter::ErrorCode
-MarcTextWriter::getErrorCode(void)
+void
+MarcTextWriter::setRecordHeader(std::string recordHeader)
 {
-	return m_errorCode;
+	m_recordHeader = recordHeader;
 }
 
 /*
- * Get last error message.
+ * Set record footer.
  */
-std::string &
-MarcTextWriter::getErrorMessage(void)
+void
+MarcTextWriter::setRecordFooter(std::string recordFooter)
 {
-	return m_errorMessage;
+	m_recordFooter = recordFooter;
 }
 
 /*
@@ -140,10 +144,10 @@ MarcTextWriter::close(void)
  * Write record to MARC text file.
  */
 bool
-MarcTextWriter::write(MarcRecord &record,
-	const char *header, const char *footer)
+MarcTextWriter::write(MarcRecord &record)
 {
-	std::string recordBuf = header + record.toString() + footer;
+	std::string recordBuf = m_recordHeader + record.toString()
+		+ m_recordFooter;
 
 	if (m_iconvDesc == (iconv_t) -1) {
 		// Write MARCXML record.

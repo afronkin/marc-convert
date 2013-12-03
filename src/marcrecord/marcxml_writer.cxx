@@ -39,6 +39,7 @@ using namespace marcrecord;
  * Constructor.
  */
 MarcXmlWriter::MarcXmlWriter(FILE *outputFile, const char *outputEncoding)
+	: MarcWriter()
 {
 	// Clear member variables.
 	m_iconvDesc = (iconv_t) -1;
@@ -59,24 +60,6 @@ MarcXmlWriter::~MarcXmlWriter()
 {
 	// Close output file.
 	close();
-}
-
-/*
- * Get last error code.
- */
-MarcXmlWriter::ErrorCode
-MarcXmlWriter::getErrorCode(void)
-{
-	return m_errorCode;
-}
-
-/*
- * Get last error message.
- */
-std::string &
-MarcXmlWriter::getErrorMessage(void)
-{
-	return m_errorMessage;
 }
 
 /*
@@ -137,91 +120,7 @@ MarcXmlWriter::close(void)
 }
 
 /*
- * Write header to MARCXML file.
- */
-bool
-MarcXmlWriter::writeHeader(void)
-{
-	std::string header = "";
-
-	// Create MARCXML header.
-	if (m_outputEncoding != "") {
-		header += "<?xml version=\"1.0\" encoding=\""
-			+ m_outputEncoding + "\"?>\n";
-	} else {
-		header = "<?xml version=\"1.0\"?>\n";
-	}
-
-	header += "<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n";
-
-	if (m_iconvDesc == (iconv_t) -1) {
-		// Write MARCXML header.
-		if (fwrite(header.c_str(), header.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	} else {
-		// Write MARCXML header with encoding conversion.
-		std::string iconvBuf;
-		if (!iconv(m_iconvDesc, header, iconvBuf)) {
-			m_errorCode = ERROR_ICONV;
-			m_errorMessage = "encoding conversion failed";
-			return false;
-		}
-		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/*
- * Write footer to MARCXML file.
- */
-bool
-MarcXmlWriter::writeFooter(void)
-{
-	std::string footer = "</collection>\n";
-
-	if (m_iconvDesc == (iconv_t) -1) {
-		// Write MARCXML footer.
-		if (fwrite(footer.c_str(), footer.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	} else {
-		// Write MARCXML footer with encoding conversion.
-		std::string iconvBuf;
-		if (!iconv(m_iconvDesc, footer, iconvBuf)) {
-			m_errorCode = ERROR_ICONV;
-			m_errorMessage = "encoding conversion failed";
-			return false;
-		}
-		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
-			m_outputFile) != 1)
-		{
-			m_errorCode = ERROR_IO;
-			m_errorMessage = "i/o operation failed";
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/*
- * Write record to MARCXML file.
+ * Write record to output file.
  */
 bool
 MarcXmlWriter::write(MarcRecord &record)
@@ -290,6 +189,90 @@ MarcXmlWriter::write(MarcRecord &record)
 		// Write MARCXML record with encoding conversion.
 		std::string iconvBuf;
 		if (!iconv(m_iconvDesc, recordBuf, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * Write header to output file.
+ */
+bool
+MarcXmlWriter::writeHeader(void)
+{
+	std::string header = "";
+
+	// Create MARCXML header.
+	if (m_outputEncoding != "") {
+		header += "<?xml version=\"1.0\" encoding=\""
+			+ m_outputEncoding + "\"?>\n";
+	} else {
+		header = "<?xml version=\"1.0\"?>\n";
+	}
+
+	header += "<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		// Write MARCXML header.
+		if (fwrite(header.c_str(), header.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		// Write MARCXML header with encoding conversion.
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, header, iconvBuf)) {
+			m_errorCode = ERROR_ICONV;
+			m_errorMessage = "encoding conversion failed";
+			return false;
+		}
+		if (fwrite(iconvBuf.c_str(), iconvBuf.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * Write footer to output file.
+ */
+bool
+MarcXmlWriter::writeFooter(void)
+{
+	std::string footer = "</collection>\n";
+
+	if (m_iconvDesc == (iconv_t) -1) {
+		// Write MARCXML footer.
+		if (fwrite(footer.c_str(), footer.size(), 1,
+			m_outputFile) != 1)
+		{
+			m_errorCode = ERROR_IO;
+			m_errorMessage = "i/o operation failed";
+			return false;
+		}
+	} else {
+		// Write MARCXML footer with encoding conversion.
+		std::string iconvBuf;
+		if (!iconv(m_iconvDesc, footer, iconvBuf)) {
 			m_errorCode = ERROR_ICONV;
 			m_errorMessage = "encoding conversion failed";
 			return false;
