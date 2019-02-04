@@ -109,10 +109,7 @@ convertRecord(Counters &counters)
 		case MarcReader::END_OF_FILE:
 			return false;
 		case MarcReader::ERROR_INVALID_RECORD:
-			if (options.permissiveRead) {
-				counters.numBadRecs++;
-				break;
-			}
+			counters.numBadRecs++;
 			throw marcIsoReader.getErrorMessage();
 		default:
 			throw marcIsoReader.getErrorMessage();
@@ -254,10 +251,6 @@ convertFile(void)
 			|| counters.numConvertedRecs < options.numRecs;
 			counters.recNo++)
 		{
-			if (!convertRecord(counters)) {
-				break;
-			}
-
 			// Print process status.
 			time(&curTime);
 			if (curTime > prevTime) {
@@ -268,6 +261,25 @@ convertFile(void)
 
 				prevTime = curTime;
 				fflush(stderr);
+			}
+
+			if (options.permissiveRead) {
+				try {
+					if (!convertRecord(counters)) {
+						break;
+					}
+				} catch (std::string errorMessage) {
+					if (options.verboseLevel > 2) {
+						fprintf(stderr, "\rRecord: %d", counters.recNo);
+						fprintf(stderr, "\nError: %s\n", marcIsoReader.getErrorMessage().c_str());
+						fflush(stderr);
+					}
+					continue;
+				}
+			} else {
+				if (!convertRecord(counters)) {
+					break;
+				}
 			}
 		}
 
