@@ -378,9 +378,9 @@ displayUsage(void)
 {
 	int i;
 	const char *help[] = {
-		"marc-convert 1.3 (9 Mar 2013)\n",
+		"marc-convert 1.4 (29 Apr 2019)\n",
 		"Convert MARC records between different formats.\n",
-		"Copyright (c) 2013, Alexander Fronkin\n",
+		"Copyright (c) 2019, Alexander Fronkin\n",
 		"\n",
 		"usage: marc-convert [-hpv]\n",
 		"  [-f srcfmt] [-t destfmt] [-e srcenc] [-r destenc]\n",
