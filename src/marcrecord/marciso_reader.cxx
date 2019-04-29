@@ -157,39 +157,68 @@ MarcIsoReader::next(MarcRecord &record)
 	m_errorCode = OK;
 	m_errorMessage = "";
 
-	// Read record length.
-	if (fread(recordBuf, 1, 5, m_inputFile) != 5) {
-		m_errorCode = END_OF_FILE;
-		return false;
-	}
+	if (!m_autoCorrectionMode) {
+		// Read record length.
+		if (fread(recordBuf, 1, 5, m_inputFile) != 5) {
+			m_errorCode = END_OF_FILE;
+			return false;
+		}
 
-	// Parse record length.
-	if (!is_numeric(recordBuf, 5)
-		|| sscanf(recordBuf, "%5u", &recordLen) != 1)
-	{
-		// Skip until record separator.
+		// Parse record length.
+		if (!is_numeric(recordBuf, 5)
+			|| sscanf(recordBuf, "%5u", &recordLen) != 1)
+		{
+			// Skip until record separator.
+			do {
+				symbol = fgetc(m_inputFile);
+			} while (symbol >= 0 && symbol != ISO2709_RECORD_SEPARATOR);
+
+			m_errorCode = ERROR_INVALID_RECORD;
+			m_errorMessage = "invalid record length";
+			return false;
+		}
+
+		// Read record.
+		if (fread(recordBuf + 5, 1, recordLen - 5, m_inputFile)
+			!= recordLen - 5)
+		{
+			// Skip until record separator.
+			do {
+				symbol = fgetc(m_inputFile);
+			} while (!feof(m_inputFile) && symbol != ISO2709_RECORD_SEPARATOR);
+
+			m_errorCode = ERROR_INVALID_RECORD;
+			m_errorMessage =
+				"invalid record length or record data incomplete";
+			return false;
+		}
+	} else {
+		// Read record until record separator.
+		char* recordBufPtr = recordBuf;
+		recordLen = 0;
 		do {
 			symbol = fgetc(m_inputFile);
-		} while (symbol >= 0 && symbol != ISO2709_RECORD_SEPARATOR);
+			if (!feof(m_inputFile)) {
+				*recordBufPtr = static_cast<char>(symbol);
+				recordBufPtr++;
+				recordLen++;
+			}
+		} while (!feof(m_inputFile) && symbol != ISO2709_RECORD_SEPARATOR);
 
-		m_errorCode = ERROR_INVALID_RECORD;
-		m_errorMessage = "invalid record length";
-		return false;
-	}
+		if (feof(m_inputFile)) {
+			m_errorCode = END_OF_FILE;
+			return false;
+		}
+ 		if (recordLen == 0) {
+			m_errorCode = ERROR_INVALID_RECORD;
+			m_errorMessage = "invalid record length";
+			return false;
+ 		}
 
-	// Read record.
-	if (fread(recordBuf + 5, 1, recordLen - 5, m_inputFile)
-		!= recordLen - 5)
-	{
-		// Skip until record separator.
-		do {
-			symbol = fgetc(m_inputFile);
-		} while (symbol >= 0 && symbol != ISO2709_RECORD_SEPARATOR);
-
-		m_errorCode = ERROR_INVALID_RECORD;
-		m_errorMessage =
-			"invalid record length or record data incomplete";
-		return false;
+		// Replace record length.
+		char lengthBuf[6];
+		sprintf(lengthBuf, "%05d", recordLen);
+		memcpy(recordBuf, lengthBuf, 5);
 	}
 
 	// Parse record.
@@ -243,14 +272,29 @@ MarcIsoReader::parse(const char *recordBuf, unsigned int recordBufLen,
 
 		// Get base address of data.
 		unsigned int baseAddress;
-		if (!is_numeric(record.m_leader.baseAddress, 5)
-			|| sscanf(record.m_leader.baseAddress, "%05u",
-				&baseAddress) != 1
-			|| recordLen < baseAddress)
-		{
-			m_errorCode = ERROR_INVALID_RECORD;
-			m_errorMessage = "invalid base address of data";
-			throw m_errorCode;
+		if (!m_autoCorrectionMode) {
+			if (!is_numeric(record.m_leader.baseAddress, 5)
+				|| sscanf(record.m_leader.baseAddress, "%05u",
+					&baseAddress) != 1
+				|| recordLen < baseAddress)
+			{
+				m_errorCode = ERROR_INVALID_RECORD;
+				m_errorMessage = "invalid base address of data";
+				throw m_errorCode;
+			}
+		} else {
+			baseAddress = 24;
+			while (baseAddress < recordLen -1
+				&& recordBuf[baseAddress] != ISO2709_FIELD_SEPARATOR)
+			{
+				baseAddress++;
+			}
+			if (recordBuf[baseAddress] != ISO2709_FIELD_SEPARATOR) {
+				m_errorCode = ERROR_INVALID_RECORD;
+				m_errorMessage = "base address of data cannot be found";
+				throw m_errorCode;
+			}
+			baseAddress++;
 		}
 
 		// Get number of fields.
@@ -269,38 +313,53 @@ MarcIsoReader::parse(const char *recordBuf, unsigned int recordBufLen,
 			(RecordDirectoryEntry *) (recordBuf
 			+ sizeof(MarcRecord::Leader));
 		const char *recordData = recordBuf + baseAddress;
+		unsigned int recordDataPos = baseAddress;
 		int fieldNo = 0;
 		for (; fieldNo < numFields; fieldNo++, directoryEntry++) {
-			// Check directory entry.
-			if (!is_numeric((const char *) directoryEntry,
-				sizeof(RecordDirectoryEntry)))
-			{
-				std::string errorPos;
-				snprintf(errorPos, 11, "%d",
-					(char *) directoryEntry - recordBuf);
-
-				m_errorCode = ERROR_INVALID_RECORD;
-				m_errorMessage = "invalid directory entry at "
-					+ errorPos;
-				throw m_errorCode;
-			}
-
-			// Parse directory entry.
 			std::string fieldTag(directoryEntry->fieldTag, 0, 3);
 			unsigned int fieldLength, fieldStartPos;
-			if (sscanf(directoryEntry->fieldLength, "%4u%5u",
-				&fieldLength, &fieldStartPos) != 2)
-			{
-				std::string errorPos;
-				snprintf(errorPos, 11, "%d",
-					(char *) directoryEntry->fieldLength
-					- recordBuf);
+			if (!m_autoCorrectionMode) {
+				// Check directory entry.
+				if (!is_numeric((const char *) directoryEntry,
+					sizeof(RecordDirectoryEntry)))
+				{
+					std::string errorPos;
+					snprintf(errorPos, 11, "%d",
+						(char *) directoryEntry - recordBuf);
 
-				m_errorCode = ERROR_INVALID_RECORD;
-				m_errorMessage = 
-					"invalid base address of data at "
-					+ errorPos;
-				throw m_errorCode;
+					m_errorCode = ERROR_INVALID_RECORD;
+					m_errorMessage = "invalid directory entry at "
+						+ errorPos;
+					throw m_errorCode;
+				}
+
+				// Parse directory entry.
+				if (sscanf(directoryEntry->fieldLength, "%4u%5u",
+					&fieldLength, &fieldStartPos) != 2)
+				{
+					std::string errorPos;
+					snprintf(errorPos, 11, "%d",
+						(char *) directoryEntry->fieldLength
+						- recordBuf);
+
+					m_errorCode = ERROR_INVALID_RECORD;
+					m_errorMessage = 
+						"invalid base address of data at "
+						+ errorPos;
+					throw m_errorCode;
+				}
+			} else {
+				fieldStartPos = recordDataPos - baseAddress;
+				while (recordDataPos < recordLen -1
+					&& recordBuf[recordDataPos] != ISO2709_FIELD_SEPARATOR)
+				{
+					recordDataPos++;
+				}
+				if (recordBuf[recordDataPos] != ISO2709_FIELD_SEPARATOR) {
+					break;
+				}
+				fieldLength = recordDataPos - baseAddress - fieldStartPos + 1;
+				recordDataPos++;
 			}
 
 			// Check field starting position and length.
@@ -310,9 +369,14 @@ MarcIsoReader::parse(const char *recordBuf, unsigned int recordBufLen,
 				|| (fieldTag < "010" && fieldLength < 2))
 			{
 				std::string errorPos;
-				snprintf(errorPos, 11, "%d",
-					(char *) directoryEntry->fieldLength
-					- recordBuf);
+				if (!m_autoCorrectionMode) {
+					snprintf(errorPos, 11, "%d",
+						(char *) directoryEntry->fieldLength
+						- recordBuf);
+				} else {
+					snprintf(errorPos, 11, "%d",
+						fieldStartPos);
+				}
 
 				m_errorCode = ERROR_INVALID_RECORD;
 				m_errorMessage = "invalid field starting "
